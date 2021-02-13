@@ -542,6 +542,7 @@ def print_executables(extracted_directory_filepath, operative_system):
                             dirpath,
                             filename,
                         )
+                        break
                 break
     elif operative_system == "windows":
         blender_executable_filepath = os.path.join(
@@ -572,6 +573,7 @@ def print_executables(extracted_directory_filepath, operative_system):
                             dirpath,
                             filename,
                         )
+                        break
                 break
             elif dirname == "MacOS" and files[0] == "Blender":
                 blender_executable_filepath = os.path.join(

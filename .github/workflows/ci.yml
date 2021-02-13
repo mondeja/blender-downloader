@@ -12,7 +12,7 @@ on:
 jobs:
   test:
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform }}
     strategy:
       matrix:
         python-version:
@@ -20,6 +20,9 @@ jobs:
           - 3.7
           - 3.8
           - 3.9
+        platform:
+          - ubuntu-latest
+          - macos-latest
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python v${{ matrix.python-version }}
@@ -32,7 +35,6 @@ jobs:
           python -m pip install .[test]
           pip list
       - name: Test with pytest
-        # https://github.com/actions/runner/issues/241#issuecomment-577360161
         run: pytest -svv
 
 
