@@ -411,7 +411,7 @@ def download_release(download_url, output_directory):
     return output_filepath
 
 
-def extract_release(zipped_filepath, operative_system):
+def extract_release(zipped_filepath):
     """Extracts, if needed, a Blender release file depending on their file type.
 
     The file to 'extract' could be a zipped file in different formats like

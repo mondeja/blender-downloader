@@ -24,3 +24,9 @@ blender-downloader 2.90
 ```bash
 blender-downloader stable
 ```
+
+### Download nightly release and mount it, showing executable paths
+
+```bash
+blender-downloader nightly --extract --print-executables
+```
