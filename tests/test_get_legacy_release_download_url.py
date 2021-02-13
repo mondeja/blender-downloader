@@ -2,55 +2,56 @@
 Blender repositories."""
 
 import re
-from pkg_resources import parse_version
-from pkg_resources.extern.packaging.version import Version
 
 import pytest
+from pkg_resources import parse_version
+from pkg_resources.extern.packaging.version import Version
 
 from blender_downloader import get_legacy_release_download_url
 
 
-@pytest.mark.parametrize("blender_version", (
-    "2.91.2",
-    "2.91.0",
-    "2.83.0",
-    "2.83.12",
-    "2.82a",
-    "2.81",
-    "2.80",
-    "2.79",
-    "2.78",
-    "2.77",
-    "2.76",
-    "2.75",
-    "2.74",
-    "2.73",
-    "2.72",
-    "2.71",
-    "2.70",
-    "2.69",
-    "2.68",
-    "2.67",
-    "2.66",
-    "2.65",
-    "2.64",
-))
+@pytest.mark.parametrize(
+    "blender_version",
+    (
+        "2.91.2",
+        "2.91.0",
+        "2.83.0",
+        "2.83.12",
+        "2.82a",
+        "2.81",
+        "2.80",
+        "2.79",
+        "2.78",
+        "2.77",
+        "2.76",
+        "2.75",
+        "2.74",
+        "2.73",
+        "2.72",
+        "2.71",
+        "2.70",
+        "2.69",
+        "2.68",
+        "2.67",
+        "2.66",
+        "2.65",
+        "2.64",
+    ),
+)
 @pytest.mark.parametrize("operative_system", ("linux", "windows", "macos"))
 @pytest.mark.parametrize("bits", (32, 64))
 def test_get_legacy_release_download_url(blender_version, operative_system, bits):
     blender_Version = parse_version(blender_version)
-    
+
     url = get_legacy_release_download_url(blender_version, operative_system, bits)
 
     expected_url_start = "https://download.blender.org/release/Blender"
     assert url.startswith(expected_url_start)
 
     major_minor_blender_version = re.sub(
-        r"[a-zA-Z]",
-        "",
-        ".".join(blender_version.split(".")[:2])
+        r"[a-zA-Z]", "", ".".join(blender_version.split(".")[:2])
     )
-    
+
     def assert_url(url_end_schema):
         url_end = url_end_schema
         if "{blender_version}" in url_end:
@@ -66,7 +67,7 @@ def test_get_legacy_release_download_url(blender_version, operative_system, bits
         assert url == (
             f"{expected_url_start}{major_minor_blender_version}/blender-{url_end}"
         )
-    
+
     if operative_system == "macos":
         if blender_Version > Version("2.79"):
             assert_url("{blender_version}-macOS.dmg")
@@ -101,7 +102,7 @@ def test_get_legacy_release_download_url(blender_version, operative_system, bits
             assert_url("{blender_version}-windows{bits}.zip")
         else:
             assert_url("{blender_version}-release-windows{bits}.zip")
-    else:  # operative_system == "linux":        
+    else:  # operative_system == "linux":
         if blender_Version > Version("2.81"):
             assert_url("{blender_version}-linux64.tar.xz")
         elif blender_Version == Version("2.81"):
