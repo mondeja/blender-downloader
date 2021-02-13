@@ -25,6 +25,7 @@ QUIET = False
 SCRIPT_NEW_ISSUE_URL = "https://github.com/mondeja/blender-downloader/issues/new"
 NIGHTLY_VERSION_NAMES = ("beta", "alpha", "nightly", "daily")
 MINIMUM_VERSION_SUPPPORTED = "2.64"
+SUPPORTED_FILETYPES_EXTRACTION = [".bz2", ".gz", ".xz", ".zip", ".dmg"]
 
 
 def get_running_os():
@@ -33,7 +34,7 @@ def get_running_os():
     return "windows" if "win" in sys.platform else "linux"
 
 
-@lru_cache
+@lru_cache(64)
 def GET(url):
     return urlopen(Request(url)).read().decode("utf-8")
 
@@ -430,6 +431,13 @@ def extract_release(zipped_filepath):
     output_directory = os.path.abspath(os.path.dirname(zipped_filepath))
     extension = os.path.splitext(zipped_filepath)[1]
 
+    if extension not in SUPPORTED_FILETYPES_EXTRACTION:
+        sys.stderr.write(
+            f"Blender compressed release file '{zipped_filename}' extraction"
+            "is not supported by blender-downloader.\n"
+        )
+        sys.exit(1)
+
     # filepath of the extracted directory, don't confuse it with
     # `output_directory`, that is the directory where the file to extract
     # is located
@@ -468,7 +476,7 @@ def extract_release(zipped_filepath):
             )
             for file in tqdm(**progress_bar_kwargs):
                 f.extract(member=file, path=output_directory)
-    elif extension == ".dmg":
+    else:  # extension == ".dmg":
         running_os = get_running_os()
         if running_os != "macos":
             sys.stderr.write(
@@ -500,12 +508,6 @@ def extract_release(zipped_filepath):
                 contents_parent_dirpath,
                 extracted_directory_filepath,
             )
-    else:
-        sys.stderr.write(
-            f"Blender compressed release file '{zipped_filename}' extraction"
-            "is not supported by blender-downloader.\n"
-        )
-        sys.exit(1)
 
     return extracted_directory_filepath
 

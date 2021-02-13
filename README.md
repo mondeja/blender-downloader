@@ -1,7 +1,8 @@
 # blender-downloader
 
-This is a multiplatorm Python script that just downloads a specific portable
-release of Blender by version/os/bits. The minimum supported version is v2.64.
+Multiplatorm Python CLI utility that just downloads a specific portable
+release of Blender by version/os/bits from official Blender repositories. The
+minimum supported version is v2.64.
 
 ## Install
 
@@ -25,7 +26,7 @@ blender-downloader 2.90
 blender-downloader stable
 ```
 
-### Download nightly release and mount it, showing executable paths
+### Download nightly release and extract/mount it, showing executable paths
 
 ```bash
 blender-downloader nightly --extract --print-executables

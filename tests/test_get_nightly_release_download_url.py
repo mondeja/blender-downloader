@@ -1,9 +1,15 @@
 """Test for retrieve nightly release versions download URLs."""
 
+import os
+from urllib.request import urlsplit
+
 import pytest
 from pkg_resources import parse_version
 
-from blender_downloader import get_nightly_release_download_url
+from blender_downloader import (
+    SUPPORTED_FILETYPES_EXTRACTION,
+    get_nightly_release_download_url,
+)
 
 
 @pytest.mark.parametrize("blender_versions", [["nightly", "daily"], ["beta", "alpha"]])
@@ -22,3 +28,6 @@ def test_get_nightly_release_download_url(blender_versions, operative_system):
             smaller_version = version
         else:
             assert smaller_version < version
+
+        extension = os.path.splitext(os.path.basename(urlsplit(url).path))[1]
+        assert extension in SUPPORTED_FILETYPES_EXTRACTION

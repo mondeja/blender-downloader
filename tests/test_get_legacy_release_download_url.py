@@ -1,13 +1,18 @@
 """Check if legacy versions download URLs can be retrieved from official
 Blender repositories."""
 
+import os
 import re
+from urllib.request import urlsplit
 
 import pytest
 from pkg_resources import parse_version
 from pkg_resources.extern.packaging.version import Version
 
-from blender_downloader import get_legacy_release_download_url
+from blender_downloader import (
+    SUPPORTED_FILETYPES_EXTRACTION,
+    get_legacy_release_download_url,
+)
 
 
 @pytest.mark.parametrize(
@@ -127,3 +132,7 @@ def test_get_legacy_release_download_url(blender_version, operative_system, bits
                 assert_url("{blender_version}-linux-glibc211-i686.tar.bz2")
             else:
                 assert_url("{blender_version}-linux-glibc211-x86_64.tar.bz2")
+
+    # check that filetype is supported for extraction
+    extension = os.path.splitext(os.path.basename(urlsplit(url).path))[1]
+    assert extension in SUPPORTED_FILETYPES_EXTRACTION
