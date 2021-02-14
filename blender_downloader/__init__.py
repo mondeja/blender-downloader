@@ -83,6 +83,13 @@ def build_parser():
         " in the same repository as '--output-directory' value argument.",
     )
     parser.add_argument(
+        "--remove-compressed",
+        dest="remove_compressed",
+        action="store_true",
+        help="Remove compressed or image release file after extraction. Only"
+        " takes effect if '--extract' option is passed.",
+    )
+    parser.add_argument(
         "-p",
         "--print-executables",
         dest="print_executables",
@@ -141,6 +148,14 @@ def parse_args(args):
     # define '--quiet' option globally
     global QUIET
     QUIET = opts.quiet
+
+    # compatibility between '--extract' and '--remove-compressed'
+    if opts.remove_compressed and not opts.extract:
+        sys.stderr.write(
+            "The option '--remove-compressed' only makes sense passed along"
+            " with the option '--extract'.\n"
+        )
+        sys.exit(1)
 
     # assert compatible bits
     if opts.bits == 32 and (
@@ -234,6 +249,7 @@ def get_legacy_release_download_url(blender_version, operative_system, bits):
     major_minor_blender_version = re.sub(
         r"[a-zA-Z]", "", ".".join(blender_version.split(".")[:2])
     )
+    major_minor_blender_Version = Version(major_minor_blender_version)
 
     if Version(major_minor_blender_version) < Version(MINIMUM_VERSION_SUPPPORTED):
         sys.stderr.write(
@@ -244,7 +260,7 @@ def get_legacy_release_download_url(blender_version, operative_system, bits):
 
     url = "https://download.blender.org/release/"
 
-    get_error_message = lambda: (
+    version_not_found_error_message = lambda: (
         f"The release '{blender_version}' can't be located in official"
         " Blender repositories.\nMake sure that you are passing a valid"
         f" version.\nYou can check all valid releases at: {url}\n\n"
@@ -263,7 +279,7 @@ def get_legacy_release_download_url(blender_version, operative_system, bits):
             break
 
     if not _version_path_found:
-        sys.stderr.write(get_error_message())
+        sys.stderr.write(version_not_found_error_message())
         sys.exit(1)
 
     major_minor_blender_release_url = f"{url}{expected_version_path}"
@@ -273,15 +289,15 @@ def get_legacy_release_download_url(blender_version, operative_system, bits):
     download_url = None
 
     if operative_system == "macos":
-        if parse_version(major_minor_blender_version) < Version("2.65"):
+        if major_minor_blender_Version < Version("2.65"):
             expected_os_identifier = "release-OSX"
-        elif parse_version(major_minor_blender_version) < Version("2.79"):
+        elif major_minor_blender_Version < Version("2.79"):
             # previous to v2.79, macOS was identified by "OSX"
             expected_os_identifier = "OSX"
         else:
             expected_os_identifier = "macOS"
     elif operative_system == "windows":
-        if parse_version(major_minor_blender_version) < Version("2.66"):
+        if major_minor_blender_Version < Version("2.66"):
             expected_os_identifier = "release-windows"
         else:
             expected_os_identifier = operative_system
@@ -293,7 +309,7 @@ def get_legacy_release_download_url(blender_version, operative_system, bits):
 
         def valid_release_file(filename):
             # without 32 bits support
-            if parse_version(major_minor_blender_version) > Version("2.80"):
+            if major_minor_blender_Version > Version("2.80"):
                 if not filename.endswith(".zip"):
                     return False
             else:
@@ -303,14 +319,14 @@ def get_legacy_release_download_url(blender_version, operative_system, bits):
 
     elif operative_system == "linux":
         # before v2.82, Linux releases was distributed in .tar.bz2
-        if parse_version(major_minor_blender_version) < Version("2.82"):
+        if major_minor_blender_Version < Version("2.82"):
             compressed_ext = ".tar.bz2"
         else:
             compressed_ext = ".tar.xz"
 
         def valid_release_file(filename):
             # without 32 bits support
-            if parse_version(major_minor_blender_version) > Version("2.80"):
+            if major_minor_blender_Version > Version("2.80"):
                 if not filename.endswith(compressed_ext):
                     return False
             else:
@@ -320,18 +336,16 @@ def get_legacy_release_download_url(blender_version, operative_system, bits):
             return True
 
     else:  # operative_system == "macos"
-        blender_Version = parse_version(major_minor_blender_version)
-
-        if blender_Version < Version("2.79"):
+        if major_minor_blender_Version < Version("2.79"):
             # previous to v2.79, macos release was distributed in .zip
             compressed_ext = ".zip"
-        elif blender_Version == Version("2.79"):
+        elif major_minor_blender_Version == Version("2.79"):
             compressed_ext = ".tar.gz"
         else:
             compressed_ext = ".dmg"
 
         def valid_release_file(filename):
-            if blender_Version < Version("2.72"):
+            if major_minor_blender_Version < Version("2.72"):
                 # previous to v2.72, macos release supported 32 bits
                 bits_id = "x86_64" if bits == 64 else "i386"
                 if not filename.endswith(f"{bits_id}{compressed_ext}"):
@@ -353,7 +367,7 @@ def get_legacy_release_download_url(blender_version, operative_system, bits):
                 break
 
     if download_url is None:
-        sys.stderr.write(get_error_message())
+        sys.stderr.write(version_not_found_error_message())
         sys.exit(1)
 
     return download_url
@@ -635,6 +649,9 @@ def run(args=[]):
                 extracted_directory_filepath,
                 opts.operative_system,
             )
+
+        if opts.remove_compressed:
+            os.remove(downloaded_release_filepath)
 
     return 0
 

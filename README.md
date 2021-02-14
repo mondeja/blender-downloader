@@ -17,7 +17,7 @@ pip install blender-downloader
 
 ## Usage
 
-Execute `blender-downloader --help` to see all supported arguments.
+> Execute `blender-downloader --help` to see all supported arguments.
 
 ### Download release by version number
 
