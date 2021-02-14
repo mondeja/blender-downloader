@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 
 __description__ = "Multiplatorm Blender portable release downloader script."
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 QUIET = False
 
@@ -90,13 +90,21 @@ def build_parser():
         " takes effect if '--extract' option is passed.",
     )
     parser.add_argument(
-        "-p",
-        "--print-executables",
-        dest="print_executables",
+        "--print-blender-executable",
+        dest="print_blender_executable",
         action="store_true",
-        help="If this option is passed, the executables of Blender and the"
-        " Python interpreter included with Blender will be printed"
-        " to the standard output.",
+        help="If this option is passed, the location of the Blender executable"
+        " will be printed to the standard output. This option must be used"
+        " along with '--extract' or won't take effect.",
+    )
+    parser.add_argument(
+        "--print-python-executable",
+        dest="print_python_executable",
+        action="store_true",
+        help="If this option is passed, the location of the Python interpreter"
+        " executable included With Blender will be printed to the standard"
+        " output. This option must be used along with '--extract' or won't"
+        " take effect.",
     )
     parser.add_argument(
         "--os",
@@ -526,7 +534,12 @@ def extract_release(zipped_filepath):
     return extracted_directory_filepath
 
 
-def print_executables(extracted_directory_filepath, operative_system):
+def print_executables(
+    extracted_directory_filepath,
+    operative_system,
+    print_blender_executable,
+    print_python_executable,
+):
     """Calling this function, the filepaths of the Blender executable and the
     Python interpreter included in Blender will be printed to the standard
     output.
@@ -539,6 +552,13 @@ def print_executables(extracted_directory_filepath, operative_system):
 
     operative_system : str
       Operative system correspondent to the release.
+
+    print_blender_executable : bool
+      Print Blender executable location to the standard output.
+
+    print_python_executable : bool
+      Print Python interpreter executable included with Blender to the standard
+      output.
     """
     # search executables by operative system
     if operative_system == "linux":
@@ -598,25 +618,27 @@ def print_executables(extracted_directory_filepath, operative_system):
 
     # print executables
     error = False
-    if blender_executable_filepath is None:
-        sys.stderr.write("Blender executable not found.\n")
-        error = True
-    elif not os.path.isfile(blender_executable_filepath):
-        sys.stderr.write(
-            "Blender executable not found in expected path"
-            f" '{blender_executable_filepath}'.\n"
-        )
-        error = True
-    else:
-        sys.stdout.write(f"{blender_executable_filepath}\n")
+    if print_blender_executable:
+        if blender_executable_filepath is None:
+            sys.stderr.write("Blender executable not found.\n")
+            error = True
+        elif not os.path.isfile(blender_executable_filepath):
+            sys.stderr.write(
+                "Blender executable not found in expected path"
+                f" '{blender_executable_filepath}'.\n"
+            )
+            error = True
+        else:
+            sys.stdout.write(f"{blender_executable_filepath}\n")
 
-    if not os.path.isfile(python_executable_filepath):
-        sys.stderr.write(
-            "Builtin Blender Python intepreter executable filepath not found\n"
-        )
-        error = True
-    else:
-        sys.stdout.write(f"{python_executable_filepath}\n")
+    if print_python_executable:
+        if not os.path.isfile(python_executable_filepath):
+            sys.stderr.write(
+                "Builtin Blender Python intepreter executable filepath not found\n"
+            )
+            error = True
+        else:
+            sys.stdout.write(f"{python_executable_filepath}\n")
 
     if error:
         sys.exit(1)
@@ -644,10 +666,12 @@ def run(args=[]):
             downloaded_release_filepath,
         )
 
-        if opts.print_executables:
+        if opts.print_blender_executable or opts.print_python_executable:
             print_executables(
                 extracted_directory_filepath,
                 opts.operative_system,
+                opts.print_blender_executable,
+                opts.print_python_executable,
             )
 
         if opts.remove_compressed:

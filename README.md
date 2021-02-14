@@ -31,10 +31,16 @@ blender-downloader 2.90
 blender-downloader stable
 ```
 
-### Download nightly release and extract/mount it, showing executable paths
+### Download nightly release and extract/mount it
 
 ```bash
-blender-downloader nightly --extract --print-executables
+blender-downloader nightly --extract
+```
+
+### Download stable release, extract/mount and print `blender` executable location
+
+```bash
+blender-downloader stable --extract --print-blender-executable
 ```
 
 [pypi-link]: https://pypi.org/project/blender-downloader
