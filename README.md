@@ -5,9 +5,9 @@
 [![License][license-image]][license-link]
 [![Tests][tests-image]][tests-link]
 
-Multiplatorm Python CLI utility that just downloads a specific portable
-release of Blender by version/os/bits from official Blender repositories. The
-minimum supported version is v2.64.
+Multiplatorm Python CLI utility that downloads a specific portable release of
+Blender by version/os/bits from official Blender repositories. The minimum
+supported version is v2.64.
 
 ## Install
 

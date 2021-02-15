@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 
 __description__ = "Multiplatorm Blender portable release downloader script."
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 QUIET = False
 
@@ -609,7 +609,7 @@ def print_executables(
                         )
                         break
                 break
-            elif dirname == "MacOS" and files[0] == "Blender":
+            elif dirname == "MacOS" and files[0] in ["Blender", "blender"]:
                 blender_executable_filepath = os.path.join(
                     dirpath,
                     files[0],
