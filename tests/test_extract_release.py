@@ -11,7 +11,11 @@ import zipfile
 
 import pytest
 
-from blender_downloader import SUPPORTED_FILETYPES_EXTRACTION, extract_release
+from blender_downloader import (
+    SUPPORTED_FILETYPES_EXTRACTION,
+    extract_release,
+    get_running_os,
+)
 
 
 # NOTE: MacOS '.dmg' not tested
@@ -39,6 +43,10 @@ def create_zipped_file_by_extension(extension):
     return (fake_release_zipped_filepath, f)
 
 
+@pytest.mark.skipif(
+    get_running_os() == "macos",
+    reason="MacOS extraction not covered by 'test_extract_release' test.",
+)
 @pytest.mark.parametrize("extension", EXTENSIONS)
 def test_extract_release(extension):
     if ("." + extension.split(".")[-1]) not in SUPPORTED_FILETYPES_EXTRACTION:
