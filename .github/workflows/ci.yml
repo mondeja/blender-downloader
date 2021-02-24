@@ -31,11 +31,16 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip coveralls
           python -m pip install .[test]
           pip list
       - name: Test with pytest
-        run: pytest -svv
+        run: pytest -svv --cov=blender_downloader --cov-config=setup.cfg
+      - name: Coveralls
+        run: coveralls
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_SERVICE_NAME: github
 
 
   build-sdist:

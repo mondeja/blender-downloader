@@ -381,7 +381,7 @@ def get_legacy_release_download_url(blender_version, operative_system, bits):
     return download_url
 
 
-def download_release(download_url, output_directory):
+def download_release(download_url, output_directory, quiet=False):
     """Downloads the release file from Blender official repository.
 
     Parameters
@@ -417,7 +417,7 @@ def download_release(download_url, output_directory):
         unit_scale=True,
         unit_divisor=1000,
         miniters=1,
-        disable=QUIET,
+        disable=quiet,
     )
     with tqdm(**progress_bar_kwargs) as progress_bar:
         data = res.read(chunksize)
@@ -434,7 +434,7 @@ def download_release(download_url, output_directory):
     return output_filepath
 
 
-def extract_release(zipped_filepath):
+def extract_release(zipped_filepath, quiet=False):
     """Extracts, if needed, a Blender release file depending on their file type.
 
     The file to 'extract' could be a zipped file in different formats like
@@ -456,7 +456,7 @@ def extract_release(zipped_filepath):
     if extension not in SUPPORTED_FILETYPES_EXTRACTION:
         sys.stderr.write(
             f"Blender compressed release file '{zipped_filename}' extraction"
-            "is not supported by blender-downloader.\n"
+            " is not supported by blender-downloader.\n"
         )
         sys.exit(1)
 
@@ -466,6 +466,9 @@ def extract_release(zipped_filepath):
     extracted_directory_filepath = None
 
     if extension == ".zip":
+        if not quiet:
+            sys.stderr.write(f"Decompressing '{zipped_filename}'...\n")
+
         with zipfile.ZipFile(zipped_filepath, "r") as f:
             namelist = f.namelist()
             extracted_directory_filepath = os.path.join(
@@ -476,12 +479,13 @@ def extract_release(zipped_filepath):
                 total=len(namelist),
                 desc=f"Extracting '{zipped_filename}'",
                 iterable=namelist,
-                disable=QUIET,
+                disable=quiet,
             )
             for file in tqdm(**progress_bar_kwargs):
                 f.extract(member=file, path=output_directory)
     elif extension in [".bz2", ".gz", ".xz"]:
-        sys.stderr.write(f"Decompressing '{zipped_filename}'...\n")
+        if not quiet:
+            sys.stderr.write(f"Decompressing '{zipped_filename}'...\n")
 
         with tarfile.open(zipped_filepath, "r") as f:
             members = f.getmembers()
@@ -494,7 +498,7 @@ def extract_release(zipped_filepath):
                 total=len(members),
                 desc=f"Extracting '{zipped_filename}'",
                 iterable=members,
-                disable=QUIET,
+                disable=quiet,
             )
             for file in tqdm(**progress_bar_kwargs):
                 f.extract(member=file, path=output_directory)
@@ -660,10 +664,12 @@ def run(args=[]):
     downloaded_release_filepath = download_release(
         download_url,
         opts.output_directory,
+        quiet=QUIET,
     )
     if opts.extract:
         extracted_directory_filepath = extract_release(
             downloaded_release_filepath,
+            quiet=QUIET,
         )
 
         if opts.print_blender_executable or opts.print_python_executable:

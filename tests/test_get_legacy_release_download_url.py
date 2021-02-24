@@ -1,6 +1,8 @@
 """Check if legacy versions download URLs can be retrieved from official
 Blender repositories."""
 
+import contextlib
+import io
 import os
 import re
 from urllib.request import urlsplit
@@ -10,6 +12,7 @@ from pkg_resources import parse_version
 from pkg_resources.extern.packaging.version import Version
 
 from blender_downloader import (
+    MINIMUM_VERSION_SUPPPORTED,
     SUPPORTED_FILETYPES_EXTRACTION,
     get_legacy_release_download_url,
 )
@@ -41,12 +44,25 @@ from blender_downloader import (
         "2.66",
         "2.65",
         "2.64",
+        # Not supported version
+        "0.0.1",
     ),
 )
 @pytest.mark.parametrize("operative_system", ("linux", "windows", "macos"))
 @pytest.mark.parametrize("bits", (32, 64))
 def test_get_legacy_release_download_url(blender_version, operative_system, bits):
     blender_Version = parse_version(blender_version)
+
+    if blender_Version < Version(MINIMUM_VERSION_SUPPPORTED):
+        mocked_stderr = io.StringIO()
+        with pytest.raises(SystemExit):
+            with contextlib.redirect_stderr(mocked_stderr):
+                get_legacy_release_download_url(blender_version, operative_system, bits)
+        assert mocked_stderr.getvalue() == (
+            "The minimum version supported by blender-downloader is"
+            f" {MINIMUM_VERSION_SUPPPORTED}.\n"
+        )
+        return
 
     url = get_legacy_release_download_url(blender_version, operative_system, bits)
 

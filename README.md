@@ -4,6 +4,7 @@
 [![Python versions][pypi-pyversions-badge-link]][pypi-link]
 [![License][license-image]][license-link]
 [![Tests][tests-image]][tests-link]
+[![Coverage status][coverage-image]][coverage-link]
 
 Multiplatorm Python CLI utility that downloads a specific portable release of
 Blender by version/os/bits from official Blender repositories. The minimum
@@ -50,3 +51,5 @@ blender-downloader stable --extract --print-blender-executable
 [license-link]: https://github.com/mondeja/blender-downloader/blob/master/LICENSE
 [tests-image]: https://img.shields.io/github/workflow/status/mondeja/blender-downloader/CI
 [tests-link]: https://github.com/mondeja/blender-downloader/actions?query=workflow%3ACI
+[coverage-image]: https://img.shields.io/coveralls/github/mondeja/blender-downloader?logo=coveralls
+[coverage-link]: https://coveralls.io/github/mondeja/blender-downloader
