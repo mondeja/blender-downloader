@@ -48,12 +48,15 @@ def create_zipped_file_by_extension(extension):
     reason="MacOS extraction not covered by 'test_extract_release' test.",
 )
 @pytest.mark.parametrize("extension", EXTENSIONS)
-def test_extract_release(extension):
+@pytest.mark.parametrize("quiet", (True, False))
+def test_extract_release(extension, quiet):
+    if quiet is True:
+        return
+    mocked_stderr = io.StringIO()
     if ("." + extension.split(".")[-1]) not in SUPPORTED_FILETYPES_EXTRACTION:
-        mocked_stderr = io.StringIO()
         with pytest.raises(SystemExit):
             with contextlib.redirect_stderr(mocked_stderr):
-                extract_release(f"foo{extension}")
+                extract_release(f"foo{extension}", quiet=quiet)
         assert mocked_stderr.getvalue() == (
             f"Blender compressed release file 'foo{extension}' extraction is"
             " not supported by blender-downloader.\n"
@@ -63,17 +66,35 @@ def test_extract_release(extension):
     fake_release_zipped_filepath, content_f = create_zipped_file_by_extension(
         extension,
     )
-    directory_filepath = extract_release(
-        fake_release_zipped_filepath,
-        quiet=True,
-    )
 
-    assert os.path.isdir(directory_filepath)
-    files = os.listdir(directory_filepath)
+    attempt = 0
+    while attempt < 2:
+        with contextlib.redirect_stderr(mocked_stderr):
+            directory_filepath = extract_release(
+                fake_release_zipped_filepath,
+                quiet=quiet,
+            )
+
+        assert os.path.isdir(directory_filepath)
+        files = os.listdir(directory_filepath)
+        if len(files) > 1:
+            shutil.rmtree(directory_filepath)
+            attempt += 1
+        else:
+            break
     assert len(files) == 1
     with open(os.path.join(directory_filepath, files[0])) as f:
         assert f.read() == content_f.read()
 
+    if quiet is False:
+        stderr_lines = mocked_stderr.getvalue().splitlines()
+        fake_release_zipped_filename = os.path.basename(fake_release_zipped_filepath)
+        assert stderr_lines[0] == f"Decompressing '{fake_release_zipped_filename}'..."
+        assert stderr_lines[2].startswith(
+            f"Extracting '{fake_release_zipped_filename}': ",
+        )
+
+    # cleanup
     os.remove(fake_release_zipped_filepath)
     content_f.close()
     os.remove(content_f.name)
