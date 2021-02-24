@@ -44,6 +44,12 @@ blender-downloader nightly --extract
 blender-downloader stable --extract --print-blender-executable
 ```
 
+### List all available versions to download
+
+```bash
+blender-downloader --list
+```
+
 [pypi-link]: https://pypi.org/project/blender-downloader
 [pypi-version-badge-link]: https://img.shields.io/pypi/v/blender-downloader
 [pypi-pyversions-badge-link]: https://img.shields.io/pypi/pyversions/blender-downloader
