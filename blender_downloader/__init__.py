@@ -612,13 +612,15 @@ def print_executables(
                             filename,
                         )
                         break
-                break
+                if blender_executable_filepath:
+                    break
             elif dirname == "MacOS" and files[0] in ["Blender", "blender"]:
                 blender_executable_filepath = os.path.join(
                     dirpath,
                     files[0],
                 )
-                break
+                if python_executable_filepath:
+                    break
 
     # print executables
     error = False
@@ -636,7 +638,9 @@ def print_executables(
             sys.stdout.write(f"{blender_executable_filepath}\n")
 
     if print_python_executable:
-        if not os.path.isfile(python_executable_filepath):
+        if python_executable_filepath is None or not os.path.isfile(
+            python_executable_filepath
+        ):
             sys.stderr.write(
                 "Builtin Blender Python intepreter executable filepath not found\n"
             )
