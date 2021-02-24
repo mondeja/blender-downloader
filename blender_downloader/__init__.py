@@ -3,6 +3,7 @@
 """blender-downloader"""
 
 import argparse
+import math
 import os
 import re
 import shutil
@@ -18,7 +19,7 @@ from tqdm import tqdm
 
 
 __description__ = "Multiplatorm Blender portable release downloader script."
-__version__ = "0.0.4"
+__version__ = "0.0.6"
 
 QUIET = False
 
@@ -58,7 +59,7 @@ def build_parser():
     )
     parser.add_argument(
         "blender_version",
-        nargs=1,
+        nargs="?",
         metavar="BLENDER_VERSION",
         help="Blender version to download. Could be a version number,"
         " 'stable', 'nightly', 'daily', 'beta' or 'alpha', being"
@@ -124,6 +125,18 @@ def build_parser():
         help="Operative system bits. Keep in mind that Blender v2.80 was the"
         " latest release with support operative systems wit 32 bits.",
     )
+    parser.add_argument(
+        "-l",
+        "--list",
+        dest="list",
+        type=int,
+        nargs="?",
+        default=-1,
+        metavar="MAX",
+        help="Prints to stdout all the available Blender release versions"
+        " supported by blender-downloader, ordered from newer to older"
+        " versions. You can pass an optional maximum number of versions to list.",
+    )
     return parser
 
 
@@ -131,7 +144,7 @@ def parse_args(args):
     parser = build_parser()
     if "-h" in args or "--help" in args:
         parser.print_help()
-        sys.exit(0)
+        sys.exit(1)
     opts = parser.parse_args(args)
 
     # operative system by function and assert that is valid
@@ -144,10 +157,22 @@ def parse_args(args):
         )
         sys.exit(1)
 
+    # parse '--list' option
+    if opts.list is None:
+        opts.list = math.inf
+    elif opts.list == -1:
+        opts.list = False
+
     # parse version
-    opts.blender_version = opts.blender_version[0]
-    if opts.blender_version == "stable":
-        opts.blender_version = get_stable_release_version_number()
+    if opts.list is False:
+        if opts.blender_version is None:
+            parser.print_help()
+            sys.exit(1)
+        if opts.blender_version == "stable":
+            opts.blender_version = get_stable_release_version_number()
+        opts.blender_version = opts.blender_version.lstrip("v")
+    else:
+        opts.blender_version = None
 
     # parse output directory
     if hasattr(opts.output_directory, "__call__"):
@@ -200,7 +225,7 @@ def get_stable_release_version_number():
         raise err
 
 
-def get_nightly_release_download_url(blender_version, operative_system):
+def get_nightly_release_version_download_url(blender_version, operative_system):
     """Retrieves the download URL for a nightly release version of Blender.
 
     Parameters
@@ -234,68 +259,16 @@ def get_nightly_release_download_url(blender_version, operative_system):
         if _os_index == _needed_os_index and dataline.startswith('a href="/'):
             download_path = dataline.split('"')[1]
             break
-
-    return f"https://builder.blender.org{download_path}"
-
-
-def get_legacy_release_download_url(blender_version, operative_system, bits):
-    """Retrieves the download URL for a specifc release version of Blender.
-
-    Parameters
-    ----------
-
-    blender_version : str
-      Version for which the URL will be discovered. Should be a valid version
-      of Blender, otherwise shows an error an the script will exit with 1 code.
-
-    operative_system : str
-      Operative system correspondent to the release.
-
-    bits : str
-      Number of bits of the system for the release.
-    """
-    major_minor_blender_version = re.sub(
-        r"[a-zA-Z]", "", ".".join(blender_version.split(".")[:2])
-    )
-    major_minor_blender_Version = Version(major_minor_blender_version)
-
-    if Version(major_minor_blender_version) < Version(MINIMUM_VERSION_SUPPPORTED):
-        sys.stderr.write(
-            "The minimum version supported by blender-downloader is"
-            f" {MINIMUM_VERSION_SUPPPORTED}.\n"
-        )
-        sys.exit(1)
-
-    url = "https://download.blender.org/release/"
-
-    version_not_found_error_message = lambda: (
-        f"The release '{blender_version}' can't be located in official"
-        " Blender repositories.\nMake sure that you are passing a valid"
-        f" version.\nYou can check all valid releases at: {url}\n\n"
-        f"If you think that '{blender_version}' is a valid release and"
-        " this is a problem with the downloader,\nplease, report it to"
-        f" {SCRIPT_NEW_ISSUE_URL}\n"
+    return (
+        f"https://builder.blender.org{download_path}",
+        download_path.split("-")[1],
     )
 
-    res = GET(url)
 
-    expected_version_path = f"Blender{major_minor_blender_version}/"
-    _version_path_found = False
-    for line in res.splitlines():
-        if line.startswith(f'<a href="{expected_version_path}'):
-            _version_path_found = True
-            break
-
-    if not _version_path_found:
-        sys.stderr.write(version_not_found_error_message())
-        sys.exit(1)
-
-    major_minor_blender_release_url = f"{url}{expected_version_path}"
-
-    res = GET(major_minor_blender_release_url)
-
-    download_url = None
-
+def _build_download_repo_expected_os_identifier(
+    operative_system,
+    major_minor_blender_Version,
+):
     if operative_system == "macos":
         if major_minor_blender_Version < Version("2.65"):
             expected_os_identifier = "release-OSX"
@@ -311,8 +284,14 @@ def get_legacy_release_download_url(blender_version, operative_system, bits):
             expected_os_identifier = operative_system
     else:
         expected_os_identifier = operative_system
+    return expected_os_identifier
 
-    # build release filename validation function
+
+def _build_download_repo_release_file_validator(
+    operative_system,
+    bits,
+    major_minor_blender_Version,
+):
     if operative_system == "windows":
 
         def valid_release_file(filename):
@@ -363,16 +342,92 @@ def get_legacy_release_download_url(blender_version, operative_system, bits):
                     return False
             return True
 
+    return valid_release_file
+
+
+def get_legacy_release_download_url(blender_version, operative_system, bits):
+    """Retrieves the download URL for a specifc release version of Blender.
+
+    Parameters
+    ----------
+
+    blender_version : str
+      Version for which the URL will be discovered. Should be a valid version
+      of Blender, otherwise shows an error an the script will exit with 1 code.
+
+    operative_system : str
+      Operative system correspondent to the release.
+
+    bits : str
+      Number of bits of the system for the release.
+    """
+    major_minor_blender_version = re.sub(
+        r"[a-zA-Z]", "", ".".join(blender_version.split(".")[:2])
+    )
+    major_minor_blender_Version = Version(major_minor_blender_version)
+
+    if Version(major_minor_blender_version) < Version(MINIMUM_VERSION_SUPPPORTED):
+        sys.stderr.write(
+            "The minimum version supported by blender-downloader is"
+            f" {MINIMUM_VERSION_SUPPPORTED}.\n"
+        )
+        sys.exit(1)
+
+    url = "https://download.blender.org/release/"
+
+    version_not_found_error_message = lambda: (
+        f"The release '{blender_version}' can't be located in official"
+        " Blender repositories.\nMake sure that you are passing a valid"
+        f" version.\nYou can check all valid releases at: {url}\n\n"
+        f"If you think that '{blender_version}' is a valid release and"
+        " this is a problem with the downloader,\nplease, report it to"
+        f" {SCRIPT_NEW_ISSUE_URL}\n"
+    )
+
+    res = GET(url)
+
+    version_path = f"Blender{major_minor_blender_version}/"
+    _version_path_found = False
     for line in res.splitlines():
-        if line.startswith(f'<a href="blender-{blender_version}-'):
-            if line.split("-", 2)[2].startswith(expected_os_identifier):
-                filename = line.split('"')[1]
+        if line.startswith(f'<a href="{version_path}'):
+            _version_path_found = True
+            break
 
-                if not valid_release_file(filename):
-                    continue
+    if not _version_path_found:
+        sys.stderr.write(version_not_found_error_message())
+        sys.exit(1)
 
-                download_url = f"{major_minor_blender_release_url}{filename}"
-                break
+    major_minor_blender_release_url = f"{url}{version_path}"
+
+    res = GET(major_minor_blender_release_url)
+
+    download_url = None
+
+    expected_os_identifier = _build_download_repo_expected_os_identifier(
+        operative_system,
+        major_minor_blender_Version,
+    )
+
+    # build release filename validation function
+    valid_release_file = _build_download_repo_release_file_validator(
+        operative_system,
+        bits,
+        major_minor_blender_Version,
+    )
+
+    for line in res.splitlines():
+        if not line.startswith(f'<a href="blender-{blender_version}-'):
+            continue
+
+        if not line.split("-", 2)[2].startswith(expected_os_identifier):
+            continue
+
+        filename = line.split('"')[1]
+        if not valid_release_file(filename):
+            continue
+
+        download_url = f"{major_minor_blender_release_url}{filename}"
+        break
 
     if download_url is None:
         sys.stderr.write(version_not_found_error_message())
@@ -652,10 +707,106 @@ def print_executables(
         sys.exit(1)
 
 
+def list_available_blender_versions(maximum_versions, operative_system, bits):
+    _, nightly_version = get_nightly_release_version_download_url(
+        "alpha",
+        operative_system,
+    )
+    n_versions, versions_found = (2, [])
+
+    # Alpha release version
+    sys.stdout.write(f"{nightly_version}\n")
+    versions_found.append(nightly_version)
+    if maximum_versions < 2:
+        return 0
+
+    # Stable version number
+    stable_version = get_stable_release_version_number()
+    sys.stdout.write(f"{stable_version}\n")
+    versions_found.append(stable_version)
+    if maximum_versions < 3:
+        return 0
+
+    url = "https://download.blender.org/release/"
+    response_lines = GET(url).splitlines()
+    version_matcher = re.compile(r"^\d+\.\d+$")
+    min_blender_Version_supported = Version(MINIMUM_VERSION_SUPPPORTED)
+
+    for line in reversed(response_lines):
+        quote_split = line.split('"')
+        if len(quote_split) < 2:
+            continue
+
+        blender_split = quote_split[1].split("Blender")
+        if len(blender_split) < 2:
+            continue
+
+        blender_version = blender_split[1].rstrip("/")
+        if not re.match(version_matcher, blender_version):
+            continue
+
+        major_minor_blender_Version = Version(blender_version)
+        if major_minor_blender_Version < min_blender_Version_supported:
+            continue
+
+        expected_os_identifier = _build_download_repo_expected_os_identifier(
+            operative_system,
+            major_minor_blender_Version,
+        )
+
+        # build release filename validation function
+        valid_release_file = _build_download_repo_release_file_validator(
+            operative_system,
+            bits,
+            major_minor_blender_Version,
+        )
+
+        major_minor_blender_release_url = f"{url}Blender{blender_version}/"
+
+        repo_response = GET(major_minor_blender_release_url).splitlines()
+        for repo_line in reversed(repo_response):
+            if not repo_line.startswith(f'<a href="blender-{blender_version}'):
+                continue
+
+            if not repo_line.split("-", 2)[2].startswith(expected_os_identifier):
+                continue
+
+            filename = repo_line.split('"')[1]
+            if not valid_release_file(filename):
+                continue
+
+            # found version
+            version = repo_line.split("-")[1]
+            if version.count(".") > 2:
+                version = ".".join(version.split(".")[:3])
+            if version in versions_found:
+                continue
+
+            # print version
+            versions_found.append(version)
+            n_versions += 1
+            sys.stdout.write(f"{version}\n")
+
+            if n_versions >= maximum_versions:
+                break
+
+        if n_versions >= maximum_versions:
+            break
+
+    return 0
+
+
 def run(args=[]):
     opts = parse_args(args)
+    if opts.list:
+        return list_available_blender_versions(
+            opts.list,
+            opts.operative_system,
+            opts.bits,
+        )
+
     if opts.blender_version in NIGHTLY_VERSION_NAMES:
-        download_url = get_nightly_release_download_url(
+        download_url, _ = get_nightly_release_version_download_url(
             opts.blender_version,
             opts.operative_system,
         )

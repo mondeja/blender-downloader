@@ -8,17 +8,20 @@ from pkg_resources import parse_version
 
 from blender_downloader import (
     SUPPORTED_FILETYPES_EXTRACTION,
-    get_nightly_release_download_url,
+    get_nightly_release_version_download_url,
 )
 
 
 @pytest.mark.parametrize("blender_versions", [["nightly", "daily"], ["beta", "alpha"]])
 @pytest.mark.parametrize("operative_system", ["linux", "macos", "windows"])
-def test_get_nightly_release_download_url(blender_versions, operative_system):
+def test_get_nightly_release_version_download_url(blender_versions, operative_system):
     smaller_version = None
 
     for blender_version in blender_versions:
-        url = get_nightly_release_download_url(blender_version, operative_system)
+        url, _ = get_nightly_release_version_download_url(
+            blender_version,
+            operative_system,
+        )
 
         assert url.startswith("https://builder.blender.org/download/blender-")
         assert operative_system in url.lower()
