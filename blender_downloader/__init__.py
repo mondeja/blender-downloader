@@ -708,6 +708,24 @@ def print_executables(
 
 
 def list_available_blender_versions(maximum_versions, operative_system, bits):
+    """Prints to stdout all Blender versions available in official repositories.
+
+    The printing order is from greater versions to lower. You can specify a maximum
+    number of versions to print using the ``maximum_versions`` parameter.
+
+    Parameters
+    ----------
+
+    maximum_versions : int
+      Maximum number of versions to print.
+
+    operative_system : str
+      Operative system of the releases to be printed. Can be either "linux",
+      "macos" or "windows".
+
+    bits : int
+      Number of bits of the system. Can be either 64 or 32.
+    """
     _, nightly_version = get_nightly_release_version_download_url(
         "alpha",
         operative_system,
