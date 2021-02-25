@@ -10,23 +10,28 @@ import shutil
 import sys
 import tarfile
 import zipfile
-from functools import lru_cache
 from urllib.request import Request, urlopen, urlsplit
 
+from appdirs import user_data_dir
+from diskcache import Cache
 from pkg_resources import parse_version
 from pkg_resources.extern.packaging.version import Version
 from tqdm import tqdm
 
 
+__author__ = "mondeja"
 __description__ = "Multiplatorm Blender portable release downloader script."
-__version__ = "0.0.6"
+__title__ = "blender-downloader"
+__version__ = "0.0.7"
 
 QUIET = False
 
-SCRIPT_NEW_ISSUE_URL = "https://github.com/mondeja/blender-downloader/issues/new"
+SCRIPT_NEW_ISSUE_URL = f"https://github.com/{__author__}/{__title__}/issues/new"
 NIGHTLY_VERSION_NAMES = ("beta", "alpha", "nightly", "daily")
 MINIMUM_VERSION_SUPPPORTED = "2.64"
 SUPPORTED_FILETYPES_EXTRACTION = [".bz2", ".gz", ".xz", ".zip", ".dmg"]
+NIGHLY_RELEASES_CACHE_EXPIRATION = 60 * 60 * 24  # 1 day
+CACHE = Cache(user_data_dir(appname=__title__, appauthor=__author__))
 
 
 def get_running_os():
@@ -35,9 +40,12 @@ def get_running_os():
     return "windows" if "win" in sys.platform else "linux"
 
 
-@lru_cache(64)
-def GET(url):
-    return urlopen(Request(url)).read().decode("utf-8")
+def GET(url, expire=None):
+    response = CACHE.get(url)
+    if response is None:
+        response = urlopen(Request(url)).read()
+        CACHE.set(url, response, expire=expire)
+    return response.decode("utf-8")
 
 
 def build_parser():
@@ -211,7 +219,9 @@ def get_stable_release_version_number():
     """Retrieves the latest Blender stable release version number from their
     website.
     """
-    res = GET("https://www.blender.org/download/")[8000:15000]
+    res = GET(
+        "https://www.blender.org/download/", expire=NIGHLY_RELEASES_CACHE_EXPIRATION
+    )
     try:
         return re.search(r"blender-(\d+\.\d+\.\d+)-", res).group(1)
     except AttributeError as err:
@@ -242,7 +252,10 @@ def get_nightly_release_version_download_url(blender_version, operative_system):
         blender_version, blender_version
     )
 
-    res = GET("https://builder.blender.org/download/")[500:-8000]
+    res = GET(
+        "https://builder.blender.org/download/",
+        expire=NIGHLY_RELEASES_CACHE_EXPIRATION,
+    )
 
     versions_data = None
     for line in res.splitlines():
