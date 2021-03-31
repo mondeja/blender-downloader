@@ -30,7 +30,7 @@ def test_get_nightly_release_version_download_url(blender_versions, operative_sy
         if smaller_version is None:
             smaller_version = version
         else:
-            assert smaller_version < version
+            assert smaller_version <= version
 
         extension = os.path.splitext(os.path.basename(urlsplit(url).path))[1]
         assert extension in SUPPORTED_FILETYPES_EXTRACTION

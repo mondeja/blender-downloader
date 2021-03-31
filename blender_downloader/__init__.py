@@ -22,7 +22,7 @@ from tqdm import tqdm
 __author__ = "mondeja"
 __description__ = "Multiplatorm Blender portable release downloader script."
 __title__ = "blender-downloader"
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 
 QUIET = False
 
@@ -263,15 +263,28 @@ def get_nightly_release_version_download_url(blender_version, operative_system):
             versions_data = line.split("<")
             break
 
-    _os_index, _needed_os_index = (0, {"beta": 1, "alpha": 2}[blender_version])
-    download_path = None
-    for dataline in versions_data:
-        if f"os {operative_system}" in dataline:
-            _os_index += 1
-            continue
-        if _os_index == _needed_os_index and dataline.startswith('a href="/'):
-            download_path = dataline.split('"')[1]
-            break
+    def get_download_path(version_full_match=True):
+        download_path, _inside_os_section = (None, False)
+        for line in versions_data:
+            if _inside_os_section:
+                if line.startswith('a href="/'):
+                    download_path = line.split('"')[1]
+                    if version_full_match:
+                        continue
+                    else:
+                        break
+                if line.endswith(blender_version.capitalize()):
+                    break
+            else:
+                if f"os {operative_system}" in line.lower():
+                    _inside_os_section = True
+                continue
+        return download_path
+
+    download_path = get_download_path()
+    if operative_system not in download_path.lower():
+        download_path = get_download_path(version_full_match=False)
+
     return (
         f"https://builder.blender.org{download_path}",
         download_path.split("-")[1],
