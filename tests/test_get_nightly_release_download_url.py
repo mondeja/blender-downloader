@@ -12,10 +12,14 @@ from blender_downloader import (
 )
 
 
-@pytest.mark.parametrize("blender_versions", [["nightly", "daily"], ["beta", "alpha"]])
+@pytest.mark.parametrize(
+    "blender_versions",
+    [["nightly", "daily"], ["beta", "alpha"]],
+    ids=("nightly,daily", "beta,alpha"),
+)
 @pytest.mark.parametrize("operative_system", ["linux", "macos", "windows"])
 def test_get_nightly_release_version_download_url(blender_versions, operative_system):
-    smaller_version = None
+    another_version = None
 
     for blender_version in blender_versions:
         url, _ = get_nightly_release_version_download_url(
@@ -27,10 +31,10 @@ def test_get_nightly_release_version_download_url(blender_versions, operative_sy
         assert operative_system in url.lower()
 
         version = parse_version(url.split("-")[1])
-        if smaller_version is None:
-            smaller_version = version
+        if another_version is None:
+            another_version = version
         else:
-            assert smaller_version <= version
+            assert another_version != version
 
         extension = os.path.splitext(os.path.basename(urlsplit(url).path))[1]
         assert extension in SUPPORTED_FILETYPES_EXTRACTION
