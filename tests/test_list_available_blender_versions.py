@@ -59,7 +59,7 @@ def test_list_available_blender_versions(maximum_versions, operative_system, bit
         version = BlenderVersion(raw_version)
         assert min_version_supported < version
 
-        if i > 2:  # first versions are alpha and stable
+        if i > 2:  # first version is the stable one
             if prev_version is not None:
                 assert version < prev_version
         prev_version = version

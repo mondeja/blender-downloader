@@ -23,19 +23,13 @@ pip install blender-downloader
 ### Download release by version number
 
 ```bash
-blender-downloader 2.90
+blender-downloader 2.92
 ```
 
 ### Download current stable release
 
 ```bash
 blender-downloader stable
-```
-
-### Download nightly release and extract/mount it
-
-```bash
-blender-downloader nightly --extract
 ```
 
 ### Download stable release, extract/mount and print `blender` executable location

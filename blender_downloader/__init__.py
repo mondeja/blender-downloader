@@ -22,12 +22,11 @@ from tqdm import tqdm
 __author__ = "mondeja"
 __description__ = "Multiplatorm Blender portable release downloader script."
 __title__ = "blender-downloader"
-__version__ = "0.0.8"
+__version__ = "0.0.9"
 
 QUIET = False
 
 SCRIPT_NEW_ISSUE_URL = f"https://github.com/{__author__}/{__title__}/issues/new"
-NIGHTLY_VERSION_NAMES = ("beta", "alpha", "nightly", "daily")
 MINIMUM_VERSION_SUPPPORTED = "2.64"
 SUPPORTED_FILETYPES_EXTRACTION = [".bz2", ".gz", ".xz", ".zip", ".dmg"]
 NIGHLY_RELEASES_CACHE_EXPIRATION = 60 * 60 * 24  # 1 day
@@ -70,8 +69,7 @@ def build_parser():
         nargs="?",
         metavar="BLENDER_VERSION",
         help="Blender version to download. Could be a version number,"
-        " 'stable', 'nightly', 'daily', 'beta' or 'alpha', being"
-        " 'nightly' the same as 'beta' and 'daily' the same as 'alpha'."
+        " or the word 'stable' to download the current stable version."
         f" The minium version supported is {MINIMUM_VERSION_SUPPPORTED}.",
     )
     parser.add_argument(
@@ -200,7 +198,7 @@ def parse_args(args):
 
     # assert compatible bits
     if opts.bits == 32 and (
-        opts.blender_version in NIGHTLY_VERSION_NAMES
+        opts.blender_version == "stable"
         or parse_version(opts.blender_version) > Version("2.80")
     ):
         sys.stderr.write(
@@ -233,62 +231,6 @@ def get_stable_release_version_number():
             )
             sys.exit(1)
         raise err
-
-
-def get_nightly_release_version_download_url(blender_version, operative_system):
-    """Retrieves the download URL for a nightly release version of Blender.
-
-    Parameters
-    ----------
-
-    blender_version : str
-      Version for which the URL will be discovered. Could be either 'nightly',
-      'daily', 'beta' or 'alpha'.
-
-    operative_system : str
-      Operative system correspondent to the release.
-    """
-    blender_version = {"nightly": "beta", "daily": "alpha"}.get(
-        blender_version, blender_version
-    )
-
-    res = GET(
-        "https://builder.blender.org/download/",
-        expire=NIGHLY_RELEASES_CACHE_EXPIRATION,
-    )
-
-    versions_data = None
-    for line in res.splitlines():
-        if "/download/blender-" in line:
-            versions_data = line.split("<")
-            break
-
-    def get_download_path(version_full_match=True):
-        download_path, _inside_os_section = (None, False)
-        for line in versions_data:
-            if _inside_os_section:
-                if line.startswith('a href="/'):
-                    download_path = line.split('"')[1]
-                    if version_full_match:
-                        continue
-                    else:
-                        break
-                if line.endswith(blender_version.capitalize()):
-                    break
-            else:
-                if f"os {operative_system}" in line.lower():
-                    _inside_os_section = True
-                continue
-        return download_path
-
-    download_path = get_download_path()
-    if operative_system not in download_path.lower():
-        download_path = get_download_path(version_full_match=False)
-
-    return (
-        f"https://builder.blender.org{download_path}",
-        download_path.split("-")[1],
-    )
 
 
 def _build_download_repo_expected_os_identifier(
@@ -752,23 +694,13 @@ def list_available_blender_versions(maximum_versions, operative_system, bits):
     bits : int
       Number of bits of the system. Can be either 64 or 32.
     """
-    _, nightly_version = get_nightly_release_version_download_url(
-        "alpha",
-        operative_system,
-    )
-    n_versions, versions_found = (2, [])
-
-    # Alpha release version
-    sys.stdout.write(f"{nightly_version}\n")
-    versions_found.append(nightly_version)
-    if maximum_versions < 2:
-        return 0
+    n_versions, versions_found = (1, [])
 
     # Stable version number
     stable_version = get_stable_release_version_number()
     sys.stdout.write(f"{stable_version}\n")
     versions_found.append(stable_version)
-    if maximum_versions < 3:
+    if maximum_versions < 2:
         return 0
 
     url = "https://download.blender.org/release/"
@@ -849,17 +781,11 @@ def run(args=[]):
             opts.bits,
         )
 
-    if opts.blender_version in NIGHTLY_VERSION_NAMES:
-        download_url, _ = get_nightly_release_version_download_url(
-            opts.blender_version,
-            opts.operative_system,
-        )
-    else:
-        download_url = get_legacy_release_download_url(
-            opts.blender_version,
-            opts.operative_system,
-            opts.bits,
-        )
+    download_url = get_legacy_release_download_url(
+        opts.blender_version,
+        opts.operative_system,
+        opts.bits,
+    )
     downloaded_release_filepath = download_release(
         download_url,
         opts.output_directory,
