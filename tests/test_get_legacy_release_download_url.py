@@ -21,10 +21,12 @@ from blender_downloader import (
 @pytest.mark.parametrize(
     "blender_version",
     (
+        "2.93.0",  # change in release formats
+        "2.92.0",
         "2.91.2",
-        "2.91.0",
+        "2.83.17",
+        "2.83.13",  # change in 2.83.x release formats
         "2.83.0",
-        "2.83.12",
         "2.82a",
         "2.81",
         "2.80",
@@ -44,7 +46,7 @@ from blender_downloader import (
         "2.66",
         "2.65",
         "2.64",
-        # Not supported version
+        # not supported version
         "0.0.1",
     ),
 )
@@ -90,7 +92,13 @@ def test_get_legacy_release_download_url(blender_version, operative_system, bits
         )
 
     if operative_system == "macos":
-        if blender_Version > Version("2.79"):
+        if blender_Version >= Version("2.93"):
+            assert_url("{blender_version}-macos-x64.dmg")
+        elif blender_Version >= Version("2.83.14") and blender_Version < Version(
+            "2.84"
+        ):
+            assert_url("{blender_version}-macos-x64.dmg")
+        elif blender_Version > Version("2.79"):
             assert_url("{blender_version}-macOS.dmg")
         elif blender_Version == Version("2.79"):
             assert_url("{blender_version}-macOS-10.6.tar.gz")
@@ -117,14 +125,26 @@ def test_get_legacy_release_download_url(blender_version, operative_system, bits
             else:
                 assert_url("{blender_version}-OSX_10.6-x86_64.zip")
     elif operative_system == "windows":
-        if blender_Version > Version("2.80"):
+        if blender_Version >= Version("2.93"):
+            assert_url("{blender_version}-windows-x64.zip")
+        elif blender_Version >= Version("2.83.14") and blender_Version < Version(
+            "2.84"
+        ):
+            assert_url("{blender_version}-windows-x64.zip")
+        elif blender_Version > Version("2.80"):
             assert_url("{blender_version}-windows64.zip")
         elif blender_Version > Version("2.65"):
             assert_url("{blender_version}-windows{bits}.zip")
         else:
             assert_url("{blender_version}-release-windows{bits}.zip")
     else:  # operative_system == "linux":
-        if blender_Version > Version("2.81"):
+        if blender_Version >= Version("2.93"):
+            assert_url("{blender_version}-linux-x64.tar.xz")
+        elif blender_Version >= Version("2.83.14") and blender_Version < Version(
+            "2.84"
+        ):
+            assert_url("{blender_version}-linux-x64.tar.xz")
+        elif blender_Version > Version("2.81"):
             assert_url("{blender_version}-linux64.tar.xz")
         elif blender_Version == Version("2.81"):
             assert_url("{blender_version}-linux-glibc217-x86_64.tar.bz2")

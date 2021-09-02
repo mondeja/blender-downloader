@@ -22,7 +22,7 @@ from tqdm import tqdm
 __author__ = "mondeja"
 __description__ = "Multiplatorm Blender portable release downloader script."
 __title__ = "blender-downloader"
-__version__ = "0.0.10"
+__version__ = "0.0.11"
 
 QUIET = False
 
@@ -276,7 +276,7 @@ def _build_download_repo_expected_os_identifier(
             # previous to v2.79, macOS was identified by "OSX"
             expected_os_identifier = "OSX"
         else:
-            expected_os_identifier = "macOS"
+            expected_os_identifier = "mac"  # some macOS, other macos
     elif operative_system == "windows":
         if major_minor_blender_Version < Version("2.66"):
             expected_os_identifier = "release-windows"
@@ -336,6 +336,10 @@ def _build_download_repo_release_file_validator(
                 # previous to v2.72, macos release supported 32 bits
                 bits_id = "x86_64" if bits == 64 else "i386"
                 if not filename.endswith(f"{bits_id}{compressed_ext}"):
+                    return False
+            elif major_minor_blender_Version >= Version("2.93"):
+                # from v2.93, Blender supports arm64 builds for macOS
+                if not filename.endswith(f"x64{compressed_ext}"):
                     return False
             else:
                 if not filename.endswith(compressed_ext):
