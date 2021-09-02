@@ -13,7 +13,7 @@ import zipfile
 from urllib.request import Request, urlopen, urlsplit
 
 from appdirs import user_data_dir
-from diskcache import Cache
+from diskcache import Cache, Timeout as CacheTimeout
 from pkg_resources import parse_version
 from pkg_resources.extern.packaging.version import Version
 from tqdm import tqdm
@@ -22,7 +22,7 @@ from tqdm import tqdm
 __author__ = "mondeja"
 __description__ = "Multiplatorm Blender portable release downloader script."
 __title__ = "blender-downloader"
-__version__ = "0.0.9"
+__version__ = "0.0.10"
 
 QUIET = False
 
@@ -30,7 +30,9 @@ SCRIPT_NEW_ISSUE_URL = f"https://github.com/{__author__}/{__title__}/issues/new"
 MINIMUM_VERSION_SUPPPORTED = "2.64"
 SUPPORTED_FILETYPES_EXTRACTION = [".bz2", ".gz", ".xz", ".zip", ".dmg"]
 NIGHLY_RELEASES_CACHE_EXPIRATION = 60 * 60 * 24  # 1 day
-CACHE = Cache(user_data_dir(appname=__title__, appauthor=__author__))
+CACHE = Cache(
+    user_data_dir(appname=__title__, appauthor=__author__, version=__version__)
+)
 
 
 def get_running_os():
@@ -39,11 +41,14 @@ def get_running_os():
     return "windows" if "win" in sys.platform else "linux"
 
 
-def GET(url, expire=None):
-    response = CACHE.get(url)
+def GET(url, expire=259200, use_cache=True):  # 3 days for expiration
+    response = None
+    if use_cache:
+        response = CACHE.get(url)
     if response is None:
         response = urlopen(Request(url)).read()
-        CACHE.set(url, response, expire=expire)
+        if use_cache:
+            CACHE.set(url, response, expire=expire)
     return response.decode("utf-8")
 
 
@@ -143,6 +148,20 @@ def build_parser():
         " supported by blender-downloader, ordered from newer to older"
         " versions. You can pass an optional maximum number of versions to list.",
     )
+    parser.add_argument(
+        "--no-cache",
+        "--nocache",
+        dest="use_cache",
+        action="store_false",
+        help="Don't use cache requesting Blender repositories.",
+    )
+    parser.add_argument(
+        "--invalidate-cache",
+        "--clear-cache",
+        dest="clear_cache",
+        action="store_true",
+        help="Remove cache used internally by blender-downloader.",
+    )
     return parser
 
 
@@ -175,7 +194,9 @@ def parse_args(args):
             parser.print_help()
             sys.exit(1)
         if opts.blender_version == "stable":
-            opts.blender_version = get_stable_release_version_number()
+            opts.blender_version = get_stable_release_version_number(
+                use_cache=opts.use_cache,
+            )
         opts.blender_version = opts.blender_version.lstrip("v")
     else:
         opts.blender_version = None
@@ -210,15 +231,26 @@ def parse_args(args):
         sys.stderr.write(f"Invalid bits '{opts.bits}'. Must be either 32 or 64.\n")
         sys.exit(1)
 
+    if opts.use_cache:
+        CACHE.expire()  # remove expired items from cache
+
     return opts
 
 
-def get_stable_release_version_number():
+def get_stable_release_version_number(use_cache=True):
     """Retrieves the latest Blender stable release version number from their
     website.
+
+    Parameters
+    ----------
+
+    use_cache : bool
+      Use cache requesting Blender repositories.
     """
     res = GET(
-        "https://www.blender.org/download/", expire=NIGHLY_RELEASES_CACHE_EXPIRATION
+        "https://www.blender.org/download/",
+        expire=NIGHLY_RELEASES_CACHE_EXPIRATION,
+        use_cache=use_cache,
     )
     try:
         return re.search(r"blender-(\d+\.\d+\.\d+)-", res).group(1)
@@ -313,7 +345,9 @@ def _build_download_repo_release_file_validator(
     return valid_release_file
 
 
-def get_legacy_release_download_url(blender_version, operative_system, bits):
+def get_legacy_release_download_url(
+    blender_version, operative_system, bits, use_cache=True
+):
     """Retrieves the download URL for a specifc release version of Blender.
 
     Parameters
@@ -328,6 +362,9 @@ def get_legacy_release_download_url(blender_version, operative_system, bits):
 
     bits : str
       Number of bits of the system for the release.
+
+    use_cache : bool
+      Use cache requesting Blender repositories.
     """
     major_minor_blender_version = re.sub(
         r"[a-zA-Z]", "", ".".join(blender_version.split(".")[:2])
@@ -352,7 +389,7 @@ def get_legacy_release_download_url(blender_version, operative_system, bits):
         f" {SCRIPT_NEW_ISSUE_URL}\n"
     )
 
-    res = GET(url)
+    res = GET(url, use_cache=use_cache)
 
     version_path = f"Blender{major_minor_blender_version}/"
     _version_path_found = False
@@ -367,7 +404,7 @@ def get_legacy_release_download_url(blender_version, operative_system, bits):
 
     major_minor_blender_release_url = f"{url}{version_path}"
 
-    res = GET(major_minor_blender_release_url)
+    res = GET(major_minor_blender_release_url, use_cache=use_cache)
 
     download_url = None
 
@@ -675,7 +712,9 @@ def print_executables(
         sys.exit(1)
 
 
-def list_available_blender_versions(maximum_versions, operative_system, bits):
+def list_available_blender_versions(
+    maximum_versions, operative_system, bits, use_cache=True
+):
     """Prints to stdout all Blender versions available in official repositories.
 
     The printing order is from greater versions to lower. You can specify a maximum
@@ -693,18 +732,21 @@ def list_available_blender_versions(maximum_versions, operative_system, bits):
 
     bits : int
       Number of bits of the system. Can be either 64 or 32.
+
+    use_cache : bool
+      Use cache requesting Blender repositories.
     """
     n_versions, versions_found = (1, [])
 
     # Stable version number
-    stable_version = get_stable_release_version_number()
+    stable_version = get_stable_release_version_number(use_cache=use_cache)
     sys.stdout.write(f"{stable_version}\n")
     versions_found.append(stable_version)
     if maximum_versions < 2:
         return 0
 
     url = "https://download.blender.org/release/"
-    response_lines = GET(url).splitlines()
+    response_lines = GET(url, use_cache=use_cache).splitlines()
     version_matcher = re.compile(r"^\d+\.\d+$")
     min_blender_Version_supported = Version(MINIMUM_VERSION_SUPPPORTED)
 
@@ -739,7 +781,10 @@ def list_available_blender_versions(maximum_versions, operative_system, bits):
 
         major_minor_blender_release_url = f"{url}Blender{blender_version}/"
 
-        repo_response = GET(major_minor_blender_release_url).splitlines()
+        repo_response = GET(
+            major_minor_blender_release_url,
+            use_cache=use_cache,
+        ).splitlines()
         for repo_line in reversed(repo_response):
             if not repo_line.startswith(f'<a href="blender-{blender_version}'):
                 continue
@@ -774,17 +819,35 @@ def list_available_blender_versions(maximum_versions, operative_system, bits):
 
 def run(args=[]):
     opts = parse_args(args)
+
+    # cache invalidation
+    if opts.clear_cache:
+        try:
+            CACHE.clear()
+        except CacheTimeout:
+            sys.stderr.write(
+                "An error ocurred clearing blender-downloader's cache.\n"
+                f"Please, submit an issue to {SCRIPT_NEW_ISSUE_URL} if the"
+                " problem persists.\n"
+            )
+            return 1
+        else:
+            sys.stdout.write("Cache removed successfully!\n")
+            return 0
+
     if opts.list:
         return list_available_blender_versions(
             opts.list,
             opts.operative_system,
             opts.bits,
+            use_cache=opts.use_cache,
         )
 
     download_url = get_legacy_release_download_url(
         opts.blender_version,
         opts.operative_system,
         opts.bits,
+        use_cache=opts.use_cache,
     )
     downloaded_release_filepath = download_release(
         download_url,
