@@ -22,12 +22,12 @@ from tqdm import tqdm
 __author__ = "mondeja"
 __description__ = "Multiplatorm Blender portable release downloader script."
 __title__ = "blender-downloader"
-__version__ = "0.0.12"
+__version__ = "0.0.13"
 
 QUIET = False
 
 SCRIPT_NEW_ISSUE_URL = f"https://github.com/{__author__}/{__title__}/issues/new"
-MINIMUM_VERSION_SUPPPORTED = "2.64"
+MINIMUM_VERSION_SUPPPORTED = "2.57"
 SUPPORTED_FILETYPES_EXTRACTION = [".bz2", ".gz", ".xz", ".zip", ".dmg"]
 NIGHLY_RELEASES_CACHE_EXPIRATION = 60 * 60 * 24  # 1 day
 CACHE = Cache(
@@ -242,19 +242,6 @@ def parse_args(args):
     if opts.use_cache:
         CACHE.expire()  # remove expired items from cache
 
-    if opts.arch:
-        if opts.operative_system != "macos":
-            sys.stderr.write(
-                f"Operative system {opts.operative_system} not supported by"
-                f' architecture "{opts.arch}".\n'
-            )
-            sys.exit(1)
-        if opts.arch not in ["arm64", "x64"]:
-            sys.stderr.write(
-                f'Architecture "{opts.arch}" not supported by'
-                f' operative system "{opts.operative_system}".\n'
-            )
-
     return opts
 
 
@@ -291,7 +278,9 @@ def _build_download_repo_expected_os_identifier(
     major_minor_blender_Version,
 ):
     if operative_system == "macos":
-        if major_minor_blender_Version < Version("2.65"):
+        if major_minor_blender_Version < Version("2.61"):
+            expected_os_identifier = "OSX"
+        elif major_minor_blender_Version < Version("2.65"):
             expected_os_identifier = "release-OSX"
         elif major_minor_blender_Version < Version("2.79"):
             # previous to v2.79, macOS was identified by "OSX"
@@ -299,7 +288,9 @@ def _build_download_repo_expected_os_identifier(
         else:
             expected_os_identifier = "mac"  # some macOS, other macos
     elif operative_system == "windows":
-        if major_minor_blender_Version < Version("2.66"):
+        if major_minor_blender_Version < Version("2.61"):
+            expected_os_identifier = "windows"
+        elif major_minor_blender_Version < Version("2.66"):
             expected_os_identifier = "release-windows"
         else:
             expected_os_identifier = operative_system
@@ -356,7 +347,7 @@ def _build_download_repo_release_file_validator(
         def valid_release_file(filename):
             if major_minor_blender_Version < Version("2.72"):
                 # previous to v2.72, macos release supported 32 bits
-                bits_id = "x86_64" if bits == 64 else "i386"
+                bits_id = "x86_64" if (bits == 64 or arch == "x86_64") else "i386"
                 if not filename.endswith(f"{bits_id}{compressed_ext}"):
                     return False
             elif major_minor_blender_Version >= Version("2.93"):
