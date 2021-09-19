@@ -36,11 +36,11 @@ jobs:
           pip list
       - name: Test with pytest
         run: pytest -svv --cov=blender_downloader --cov-config=setup.cfg
-      - name: Coveralls
-        run: coveralls
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERALLS_SERVICE_NAME: github
+      #- name: Coveralls
+        #run: coveralls
+        #env:
+        #  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        #  COVERALLS_SERVICE_NAME: github
 
 
   build-sdist:

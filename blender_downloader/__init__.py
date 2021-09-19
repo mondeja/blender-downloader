@@ -22,7 +22,7 @@ from tqdm import tqdm
 __author__ = "mondeja"
 __description__ = "Multiplatorm Blender portable release downloader script."
 __title__ = "blender-downloader"
-__version__ = "0.0.11"
+__version__ = "0.0.12"
 
 QUIET = False
 
@@ -137,6 +137,14 @@ def build_parser():
         " latest release with support operative systems wit 32 bits.",
     )
     parser.add_argument(
+        "--arch",
+        dest="arch",
+        default=None,  # depending on availability between versions
+        type=str,
+        help="Architecture of the build. For most versions you don't need to"
+        " specify this parameter.",
+    )
+    parser.add_argument(
         "-l",
         "--list",
         dest="list",
@@ -234,6 +242,19 @@ def parse_args(args):
     if opts.use_cache:
         CACHE.expire()  # remove expired items from cache
 
+    if opts.arch:
+        if opts.operative_system != "macos":
+            sys.stderr.write(
+                f"Operative system {opts.operative_system} not supported by"
+                f' architecture "{opts.arch}".\n'
+            )
+            sys.exit(1)
+        if opts.arch not in ["arm64", "x64"]:
+            sys.stderr.write(
+                f'Architecture "{opts.arch}" not supported by'
+                f' operative system "{opts.operative_system}".\n'
+            )
+
     return opts
 
 
@@ -290,6 +311,7 @@ def _build_download_repo_expected_os_identifier(
 def _build_download_repo_release_file_validator(
     operative_system,
     bits,
+    arch,
     major_minor_blender_Version,
 ):
     if operative_system == "windows":
@@ -317,7 +339,7 @@ def _build_download_repo_release_file_validator(
                 if not filename.endswith(compressed_ext):
                     return False
             else:
-                bits_id = "x86_64" if bits == 64 else "i686"
+                bits_id = "x86_64" if (bits == 64 or arch == "x86_64") else "i686"
                 if not filename.endswith(f"{bits_id}{compressed_ext}"):
                     return False
             return True
@@ -339,8 +361,12 @@ def _build_download_repo_release_file_validator(
                     return False
             elif major_minor_blender_Version >= Version("2.93"):
                 # from v2.93, Blender supports arm64 builds for macOS
-                if not filename.endswith(f"x64{compressed_ext}"):
-                    return False
+                if arch in ["x64", "arm64"]:
+                    if not filename.endswith(f"{arch}{compressed_ext}"):
+                        return False
+                else:
+                    if not filename.endswith(f"x64{compressed_ext}"):
+                        return False
             else:
                 if not filename.endswith(compressed_ext):
                     return False
@@ -350,7 +376,7 @@ def _build_download_repo_release_file_validator(
 
 
 def get_legacy_release_download_url(
-    blender_version, operative_system, bits, use_cache=True
+    blender_version, operative_system, bits, arch, use_cache=True
 ):
     """Retrieves the download URL for a specifc release version of Blender.
 
@@ -366,6 +392,9 @@ def get_legacy_release_download_url(
 
     bits : str
       Number of bits of the system for the release.
+
+    arch : str
+      Identifier of the architecture for which the release will be retrieved.
 
     use_cache : bool
       Use cache requesting Blender repositories.
@@ -421,6 +450,7 @@ def get_legacy_release_download_url(
     valid_release_file = _build_download_repo_release_file_validator(
         operative_system,
         bits,
+        arch,
         major_minor_blender_Version,
     )
 
@@ -717,7 +747,7 @@ def print_executables(
 
 
 def list_available_blender_versions(
-    maximum_versions, operative_system, bits, use_cache=True
+    maximum_versions, operative_system, bits, arch, use_cache=True
 ):
     """Prints to stdout all Blender versions available in official repositories.
 
@@ -780,6 +810,7 @@ def list_available_blender_versions(
         valid_release_file = _build_download_repo_release_file_validator(
             operative_system,
             bits,
+            arch,
             major_minor_blender_Version,
         )
 
@@ -844,6 +875,7 @@ def run(args=[]):
             opts.list,
             opts.operative_system,
             opts.bits,
+            opts.arch,
             use_cache=opts.use_cache,
         )
 
@@ -851,6 +883,7 @@ def run(args=[]):
         opts.blender_version,
         opts.operative_system,
         opts.bits,
+        opts.arch,
         use_cache=opts.use_cache,
     )
     downloaded_release_filepath = download_release(
