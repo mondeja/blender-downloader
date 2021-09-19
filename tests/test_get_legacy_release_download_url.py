@@ -22,7 +22,7 @@ from blender_downloader import (
     "blender_version",
     (
         "2.93.1",
-        "2.93.0",  # change in release formats for Macos
+        "2.93.0",  # change in release formats
         "2.92.0",
         "2.91.2",
         "2.83.17",
