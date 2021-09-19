@@ -21,6 +21,7 @@ from blender_downloader import (
 @pytest.mark.parametrize(
     "blender_version",
     (
+        "2.93.1",
         "2.93.0",  # change in release formats
         "2.92.0",
         "2.91.2",
@@ -52,21 +53,24 @@ from blender_downloader import (
 )
 @pytest.mark.parametrize("operative_system", ("linux", "windows", "macos"))
 @pytest.mark.parametrize("bits", (32, 64))
-def test_get_legacy_release_download_url(blender_version, operative_system, bits):
+@pytest.mark.parametrize("arch", (None, "arm64"))
+def test_get_legacy_release_download_url(blender_version, operative_system, bits, arch):
     blender_Version = parse_version(blender_version)
 
     if blender_Version < Version(MINIMUM_VERSION_SUPPPORTED):
         mocked_stderr = io.StringIO()
         with pytest.raises(SystemExit):
             with contextlib.redirect_stderr(mocked_stderr):
-                get_legacy_release_download_url(blender_version, operative_system, bits)
+                get_legacy_release_download_url(
+                    blender_version, operative_system, bits, arch
+                )
         assert mocked_stderr.getvalue() == (
             "The minimum version supported by blender-downloader is"
             f" {MINIMUM_VERSION_SUPPPORTED}.\n"
         )
         return
 
-    url = get_legacy_release_download_url(blender_version, operative_system, bits)
+    url = get_legacy_release_download_url(blender_version, operative_system, bits, arch)
 
     expected_url_start = "https://download.blender.org/release/Blender"
     assert url.startswith(expected_url_start)
@@ -93,7 +97,10 @@ def test_get_legacy_release_download_url(blender_version, operative_system, bits
 
     if operative_system == "macos":
         if blender_Version >= Version("2.93"):
-            assert_url("{blender_version}-macos-x64.dmg")
+            if arch is not None:
+                assert_url(f"{blender_version}-macos-{arch}.dmg")
+            else:
+                assert_url("{blender_version}-macos-x64.dmg")
         elif blender_Version >= Version("2.83.14") and blender_Version < Version(
             "2.84"
         ):

@@ -41,13 +41,16 @@ class BlenderVersion:
         return self.raw
 
 
+@pytest.mark.parametrize("arch", (None, "arm64"))
 @pytest.mark.parametrize("maximum_versions", (1, 2, random.randint(5, 10), math.inf))
 @pytest.mark.parametrize("operative_system", ("linux", "windows", "macos"))
 @pytest.mark.parametrize("bits", (64, 32))
-def test_list_available_blender_versions(maximum_versions, operative_system, bits):
+def test_list_available_blender_versions(
+    maximum_versions, operative_system, bits, arch
+):
     mocked_stdout = io.StringIO()
     with contextlib.redirect_stdout(mocked_stdout):
-        list_available_blender_versions(maximum_versions, operative_system, bits)
+        list_available_blender_versions(maximum_versions, operative_system, bits, arch)
 
     prev_version, stdout_lines = (None, mocked_stdout.getvalue().splitlines())
     if maximum_versions != math.inf:
