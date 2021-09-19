@@ -53,7 +53,7 @@ from blender_downloader import (
 )
 @pytest.mark.parametrize("operative_system", ("linux", "windows", "macos"))
 @pytest.mark.parametrize("bits", (32, 64))
-@pytest.mark.parametrize("arch", (None, "arm64"))
+@pytest.mark.parametrize("arch", (None, "arm64", "i686"))
 def test_get_legacy_release_download_url(blender_version, operative_system, bits, arch):
     blender_Version = parse_version(blender_version)
 
@@ -97,7 +97,7 @@ def test_get_legacy_release_download_url(blender_version, operative_system, bits
 
     if operative_system == "macos":
         if blender_Version >= Version("2.93"):
-            if arch is not None:
+            if arch in ["x64", "arm64"]:
                 assert_url(f"{blender_version}-macos-{arch}.dmg")
             else:
                 assert_url("{blender_version}-macos-x64.dmg")

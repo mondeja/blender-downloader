@@ -339,7 +339,7 @@ def _build_download_repo_release_file_validator(
                 if not filename.endswith(compressed_ext):
                     return False
             else:
-                bits_id = "x86_64" if bits == 64 else "i686"
+                bits_id = "x86_64" if (bits == 64 or arch == "x86_64") else "i686"
                 if not filename.endswith(f"{bits_id}{compressed_ext}"):
                     return False
             return True
@@ -361,7 +361,7 @@ def _build_download_repo_release_file_validator(
                     return False
             elif major_minor_blender_Version >= Version("2.93"):
                 # from v2.93, Blender supports arm64 builds for macOS
-                if arch:
+                if arch in ["x64", "arm64"]:
                     if not filename.endswith(f"{arch}{compressed_ext}"):
                         return False
                 else:
