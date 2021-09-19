@@ -22,7 +22,7 @@ from blender_downloader import (
     "blender_version",
     (
         "2.93.1",
-        "2.93.0",  # change in release formats
+        "2.93.0",  # change in release formats for Macos
         "2.92.0",
         "2.91.2",
         "2.83.17",
@@ -47,6 +47,13 @@ from blender_downloader import (
         "2.66",
         "2.65",
         "2.64",
+        "2.63",
+        "2.62",
+        "2.61",
+        "2.60",
+        "2.59",
+        "2.58",
+        "2.57",
         # not supported version
         "0.0.1",
     ),
@@ -114,11 +121,27 @@ def test_get_legacy_release_download_url(blender_version, operative_system, bits
                 assert_url("{blender_version}-OSX_10.6-j2k-fix-i386.zip")
             else:
                 assert_url("{blender_version}-OSX_10.6-j2k-fix-x86_64.zip")
+        elif blender_Version < Version("2.60"):
+            if bits == 32:
+                assert_url("{blender_version}-OSX_10.5_i386.zip")
+            else:
+                assert_url("{blender_version}-OSX_10.5_x86_64.zip")
+        elif blender_Version == Version("2.60"):
+            if bits == 32:
+                assert_url("{blender_version}-OSX_10.5_i386.zip")
+            else:
+                assert_url("{blender_version}-OSX_10.6_x86_64.zip")
+        elif blender_Version < Version("2.64"):
+            if bits == 32:
+                assert_url("{blender_version}-release-OSX_10.5_i386.zip")
+            else:
+                assert_url("{blender_version}-release-OSX_10.5_x86_64.zip")
         elif blender_Version < Version("2.65"):
             if bits == 32:
                 assert_url("{blender_version}-release-OSX_10.6_i386.zip")
             else:
                 assert_url("{blender_version}-release-OSX_10.6_x86_64.zip")
+
         elif blender_Version < Version("2.71"):
             if bits == 32:
                 assert_url("{blender_version}-OSX_10.6-i386.zip")
@@ -141,6 +164,8 @@ def test_get_legacy_release_download_url(blender_version, operative_system, bits
         elif blender_Version > Version("2.80"):
             assert_url("{blender_version}-windows64.zip")
         elif blender_Version > Version("2.65"):
+            assert_url("{blender_version}-windows{bits}.zip")
+        elif blender_Version < Version("2.61"):
             assert_url("{blender_version}-windows{bits}.zip")
         else:
             assert_url("{blender_version}-release-windows{bits}.zip")
