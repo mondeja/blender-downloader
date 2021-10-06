@@ -22,7 +22,7 @@ from tqdm import tqdm
 __author__ = "mondeja"
 __description__ = "Multiplatorm Blender portable release downloader script."
 __title__ = "blender-downloader"
-__version__ = "0.0.13"
+__version__ = "0.0.14"
 
 QUIET = False
 
@@ -92,7 +92,8 @@ def build_parser():
         action="store_true",
         help="Extract the content of the zipped release file. If this option"
         " is passed, the content of the release file will be extracted"
-        " in the same repository as '--output-directory' value argument.",
+        " in the same repository as '--output-directory' value argument."
+        " This is not supported for MacOS releases under Python3.6",
     )
     parser.add_argument(
         "--remove-compressed",
@@ -591,10 +592,16 @@ def extract_release(zipped_filepath, quiet=False):
         running_os = get_running_os()
         if running_os != "macos":
             sys.stderr.write(
-                "blender-downloader can't mount MacOSX '.dmg' image files like"
+                "blender-downloader can't mount MacOS '.dmg' image files like"
                 f" '{extracted_directory_filepath}' in"
                 f" {running_os.capitalize()}, so you should install Blender"
                 " manually.\n"
+            )
+            sys.exit(1)
+        elif sys.version_info < (3, 7):
+            sys.stderr.write(
+                "blender-downloader can't mount MacOS '.dmg' image in Python"
+                " versions lower than 3.7. You need to mount it manually.\n"
             )
             sys.exit(1)
 
