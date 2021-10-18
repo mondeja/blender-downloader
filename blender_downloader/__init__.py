@@ -598,12 +598,6 @@ def extract_release(zipped_filepath, quiet=False):
                 " manually.\n"
             )
             sys.exit(1)
-        elif sys.version_info < (3, 7):
-            sys.stderr.write(
-                "blender-downloader can't mount MacOS '.dmg' image in Python"
-                " versions lower than 3.7. You need to mount it manually.\n"
-            )
-            sys.exit(1)
 
         extracted_directory_filepath = os.path.join(
             output_directory, os.path.basename(zipped_filepath).rstrip(".dmg")
