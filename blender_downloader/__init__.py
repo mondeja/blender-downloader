@@ -22,7 +22,7 @@ from tqdm import tqdm
 __author__ = "mondeja"
 __description__ = "Multiplatorm Blender portable release downloader script."
 __title__ = "blender-downloader"
-__version__ = "0.0.16"
+__version__ = "0.0.17"
 
 QUIET = False
 
@@ -174,6 +174,17 @@ def build_parser():
     return parser
 
 
+def unify_new_blender_version(version):
+    if version.count(".") == 0:
+        version = f"{version.rstrip('.')}.0.0"
+    elif version.count(".") == 1:
+        version = f"{version.rstrip('.')}.0"
+    elif version.count(".") > 2:
+        version_split = version.split(".")
+        version = ".".join(version_split[i] for i in range(2))
+    return version.lstrip("v")
+
+
 def parse_args(args):
     parser = build_parser()
     if "-h" in args or "--help" in args:
@@ -202,11 +213,13 @@ def parse_args(args):
         if opts.blender_version is None:
             parser.print_help()
             sys.exit(1)
+
         if opts.blender_version == "stable":
             opts.blender_version = get_stable_release_version_number(
                 use_cache=opts.use_cache,
             )
-        opts.blender_version = opts.blender_version.lstrip("v")
+        elif parse_version(opts.blender_version) >= Version("2.83"):
+            opts.blender_version = unify_new_blender_version(opts.blender_version)
     else:
         opts.blender_version = None
 
