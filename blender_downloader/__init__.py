@@ -20,7 +20,7 @@ from tqdm import tqdm
 
 
 __author__ = "mondeja"
-__description__ = "Multiplatorm Blender portable release downloader script."
+__description__ = "Multiplatform Blender portable release downloader script."
 __title__ = "blender-downloader"
 __version__ = "0.0.17"
 
