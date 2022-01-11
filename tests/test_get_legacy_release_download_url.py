@@ -168,7 +168,7 @@ def test_get_legacy_release_download_url(blender_version, operative_system, bits
             assert_url("{blender_version}-windows{bits}.zip")
         elif blender_Version > Version("2.60"):
             assert_url("{blender_version}-release-windows{bits}.zip")
-        else: # blender_Version < Version("2.61")
+        else:  # blender_Version < Version("2.61")
             assert_url("{blender_version}-windows{bits}.zip")
     else:  # operative_system == "linux":
         if blender_Version >= Version("2.93"):
