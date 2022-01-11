@@ -19,7 +19,7 @@ class BlenderVersion:
     def __init__(self, raw):
         self.raw = raw
 
-        self.version_info = list()
+        self.version_info = []
         for i, partial in enumerate(raw.split(".")):
             if i > 1:
                 for ch in partial:
@@ -41,10 +41,10 @@ class BlenderVersion:
         return self.raw
 
 
-@pytest.mark.parametrize("arch", (None, "arm64"))
 @pytest.mark.parametrize("maximum_versions", (1, 2, random.randint(5, 10), math.inf))
 @pytest.mark.parametrize("operative_system", ("linux", "windows", "macos"))
 @pytest.mark.parametrize("bits", (64, 32))
+@pytest.mark.parametrize("arch", (None, "arm64"))
 def test_list_available_blender_versions(
     maximum_versions, operative_system, bits, arch
 ):
