@@ -198,7 +198,7 @@ def parse_args(args):
     # operative system by function and assert that is valid
     if hasattr(opts.operative_system, "__call__"):
         opts.operative_system = opts.operative_system()
-    if opts.operative_system not in ["linux", "macos", "windows"]:
+    if opts.operative_system not in {"linux", "macos", "windows"}:
         sys.stderr.write(
             f"Invalid operative system '{opts.operative_system}'. Must be"
             " either 'linux', 'macos' or 'windows'.\n"
@@ -217,7 +217,7 @@ def parse_args(args):
             parser.print_help()
             sys.exit(1)
 
-        if opts.blender_version in ["stable", "lts", "nightly"]:
+        if opts.blender_version in {"stable", "lts", "nightly"}:
             opts.blender_version = discover_version_number_by_identifier(
                 opts.blender_version,
                 use_cache=opts.use_cache,
