@@ -76,8 +76,8 @@ def build_parser():
         metavar="BLENDER_VERSION",
         help="Blender version to download. Could be a version number"
         " or one of the words 'stable' (current stable version), 'lts'"
-        " (latest long term support version) and 'nightly' (latest"
-        " development release)."
+        " (latest long term support version) and 'nightly' or 'daily'"
+        " (latest development release)."
         f" The minimum version supported is {MINIMUM_VERSION_SUPPPORTED}.",
     )
     parser.add_argument(
@@ -217,7 +217,7 @@ def parse_args(args):
             parser.print_help()
             sys.exit(1)
 
-        if opts.blender_version in {"stable", "lts", "nightly"}:
+        if opts.blender_version in {"stable", "lts", "nightly", "daily"}:
             opts.blender_version = discover_version_number_by_identifier(
                 opts.blender_version,
                 use_cache=opts.use_cache,
@@ -298,7 +298,7 @@ def discover_version_number_by_identifier(identifier, use_cache=True):
                 " {SCRIPT_NEW_ISSUE_URL}.\n"
             )
             sys.exit(1)
-    elif identifier in ["lts", "nightly"]:
+    elif identifier in {"lts", "nightly", "daily"}:
         expected_substr_in_data = "lts" if identifier == "lts" else "dev"
         latest_Version = None
 
