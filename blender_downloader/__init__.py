@@ -10,7 +10,6 @@ import re
 import shutil
 import sys
 import tarfile
-from unicodedata import normalize
 import zipfile
 from urllib.request import Request, urlopen, urlsplit
 
@@ -316,6 +315,7 @@ def discover_version_number_by_identifier(identifier, use_cache=True):
         )
         sys.exit(1)
     return normalize_version(str(latest_Version))
+
 
 def _build_download_repo_expected_os_identifier(
     operative_system,
@@ -809,7 +809,8 @@ def list_available_blender_versions(
 
     # Nightly version number
     nightly_version = discover_version_number_by_identifier(
-        "nightly", use_cache=use_cache,
+        "nightly",
+        use_cache=use_cache,
     )
     sys.stdout.write(f"{nightly_version}\n")
     versions_found.append(nightly_version)
@@ -819,7 +820,8 @@ def list_available_blender_versions(
 
     # Stable version number
     stable_version = discover_version_number_by_identifier(
-        "stable", use_cache=use_cache,
+        "stable",
+        use_cache=use_cache,
     )
     sys.stdout.write(f"{stable_version}\n")
     versions_found.append(stable_version)
