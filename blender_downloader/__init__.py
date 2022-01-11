@@ -3,18 +3,19 @@
 """blender-downloader"""
 
 import argparse
+import json
 import math
 import os
 import re
 import shutil
 import sys
 import tarfile
+from unicodedata import normalize
 import zipfile
 from urllib.request import Request, urlopen, urlsplit
 
 from appdirs import user_data_dir
 from diskcache import Cache, Timeout as CacheTimeout
-from pkg_resources import parse_version
 from pkg_resources.extern.packaging.version import Version
 from tqdm import tqdm
 
@@ -27,6 +28,7 @@ __version__ = "0.0.17"
 QUIET = False
 
 SCRIPT_NEW_ISSUE_URL = f"https://github.com/{__author__}/{__title__}/issues/new"
+BLENDER_MANUAL_VERSIONS_URL = "https://docs.blender.org/PROD/versions.json"
 MINIMUM_VERSION_SUPPPORTED = "2.57"
 SUPPORTED_FILETYPES_EXTRACTION = [".bz2", ".gz", ".xz", ".zip", ".dmg"]
 NIGHLY_RELEASES_CACHE_EXPIRATION = 60 * 60 * 24  # 1 day
@@ -73,9 +75,11 @@ def build_parser():
         "blender_version",
         nargs="?",
         metavar="BLENDER_VERSION",
-        help="Blender version to download. Could be a version number,"
-        " or the word 'stable' to download the current stable version."
-        f" The minium version supported is {MINIMUM_VERSION_SUPPPORTED}.",
+        help="Blender version to download. Could be a version number"
+        " or one of the words 'stable' (current stable version), 'lts'"
+        " (latest long term support version) and 'nightly' (latest"
+        " development release)."
+        f" The minimum version supported is {MINIMUM_VERSION_SUPPPORTED}.",
     )
     parser.add_argument(
         "-d",
@@ -93,7 +97,7 @@ def build_parser():
         help="Extract the content of the zipped release file. If this option"
         " is passed, the content of the release file will be extracted"
         " in the same repository as '--output-directory' value argument."
-        " This is not supported for MacOS releases under Python3.6",
+        " This is not supported for MacOS releases using Python3.6.",
     )
     parser.add_argument(
         "--remove-compressed",
@@ -135,7 +139,7 @@ def build_parser():
         default=64 if sys.maxsize > 2 ** 32 else 32,
         type=int,
         help="Operative system bits. Keep in mind that Blender v2.80 was the"
-        " latest release with support operative systems wit 32 bits.",
+        " latest release with support operative systems with 32 bits.",
     )
     parser.add_argument(
         "--arch",
@@ -174,7 +178,7 @@ def build_parser():
     return parser
 
 
-def unify_new_blender_version(version):
+def normalize_version(version):
     if version.count(".") == 0:
         version = f"{version.rstrip('.')}.0.0"
     elif version.count(".") == 1:
@@ -214,12 +218,13 @@ def parse_args(args):
             parser.print_help()
             sys.exit(1)
 
-        if opts.blender_version == "stable":
-            opts.blender_version = get_stable_release_version_number(
+        if opts.blender_version in ["stable", "lts", "nightly"]:
+            opts.blender_version = discover_version_number_by_identifier(
+                opts.blender_version,
                 use_cache=opts.use_cache,
             )
-        elif parse_version(opts.blender_version) >= Version("2.83"):
-            opts.blender_version = unify_new_blender_version(opts.blender_version)
+        elif Version(opts.blender_version) >= Version("2.83"):
+            opts.blender_version = normalize_version(opts.blender_version)
     else:
         opts.blender_version = None
 
@@ -242,7 +247,7 @@ def parse_args(args):
     # assert compatible bits
     if opts.bits == 32 and (
         opts.blender_version == "stable"
-        or parse_version(opts.blender_version) > Version("2.80")
+        or Version(opts.blender_version) > Version("2.80")
     ):
         sys.stderr.write(
             "The latest Blender version with support for 32 bits systems is"
@@ -259,33 +264,58 @@ def parse_args(args):
     return opts
 
 
-def get_stable_release_version_number(use_cache=True):
-    """Retrieves the latest Blender stable release version number from their
-    website.
+def discover_version_number_by_identifier(identifier, use_cache=True):
+    """Discover a Blender version number given an identifier.
 
     Parameters
     ----------
 
+    identifier : str
+      Version identifier. Can be either 'stable', 'lts' or 'nightly'.
     use_cache : bool
-      Use cache requesting Blender repositories.
+      Use cache requesting Blender versions from manual.
     """
     res = GET(
-        "https://www.blender.org/download/",
+        BLENDER_MANUAL_VERSIONS_URL,
         expire=NIGHLY_RELEASES_CACHE_EXPIRATION,
         use_cache=use_cache,
     )
-    try:
-        return re.search(r"blender-(\d+\.\d+\.\d+)-", res).group(1)
-    except AttributeError as err:
-        if "'NoneType' object has no attribute 'group'" in str(err):
+    versions_json = json.loads(res)
+
+    if identifier == "stable":
+        latest_Version = None
+        for minor_version, version_data in versions_json.items():
+            if "dev" in version_data:
+                continue
+
+            minor_Version = Version(minor_version)
+            if latest_Version is None or minor_Version > latest_Version:
+                latest_Version = minor_Version
+
+        if latest_Version is None:
             sys.stderr.write(
-                "Failed to obtain the stable release version of Blender.\n"
-                " Please, report this issue using the next URL:"
-                f" {SCRIPT_NEW_ISSUE_URL}\n"
+                "Error trying to retrieve the stable release from Blender"
+                " repositories. Please, submit an issue to"
+                " {SCRIPT_NEW_ISSUE_URL}.\n"
             )
             sys.exit(1)
-        raise err
+    elif identifier in ["lts", "nightly"]:
+        expected_substr_in_data = "lts" if identifier == "lts" else "dev"
+        latest_Version = None
 
+        for minor_version, version_data in versions_json.items():
+            if expected_substr_in_data not in version_data.lower():
+                continue
+            minor_Version = Version(minor_version)
+            if latest_Version is None or minor_Version > latest_Version:
+                latest_Version = minor_Version
+    else:
+        sys.stderr.write(
+            f"Invalid identifier '{identifier}' for Blender version. Possible"
+            " values are 'stable', 'lts' and 'nightly'.\n"
+        )
+        sys.exit(1)
+    return normalize_version(str(latest_Version))
 
 def _build_download_repo_expected_os_identifier(
     operative_system,
@@ -383,7 +413,7 @@ def _build_download_repo_release_file_validator(
 def get_legacy_release_download_url(
     blender_version, operative_system, bits, arch, use_cache=True
 ):
-    """Retrieves the download URL for a specifc release version of Blender.
+    """Retrieves the download URL for a specific release version of Blender.
 
     Parameters
     ----------
@@ -741,7 +771,7 @@ def print_executables(
             python_executable_filepath
         ):
             sys.stderr.write(
-                "Builtin Blender Python intepreter executable filepath not found\n"
+                "Builtin Blender Python interpreter executable filepath not found\n"
             )
             error = True
         else:
@@ -775,13 +805,26 @@ def list_available_blender_versions(
     use_cache : bool
       Use cache requesting Blender repositories.
     """
-    n_versions, versions_found = (1, [])
+    n_versions, versions_found = (0, [])
+
+    # Nightly version number
+    nightly_version = discover_version_number_by_identifier(
+        "nightly", use_cache=use_cache,
+    )
+    sys.stdout.write(f"{nightly_version}\n")
+    versions_found.append(nightly_version)
+    n_versions += 1
+    if maximum_versions < 2:
+        return 0
 
     # Stable version number
-    stable_version = get_stable_release_version_number(use_cache=use_cache)
+    stable_version = discover_version_number_by_identifier(
+        "stable", use_cache=use_cache,
+    )
     sys.stdout.write(f"{stable_version}\n")
     versions_found.append(stable_version)
-    if maximum_versions < 2:
+    n_versions += 1
+    if maximum_versions < 3:
         return 0
 
     url = "https://download.blender.org/release/"
@@ -866,7 +909,7 @@ def run(args=[]):
             CACHE.clear()
         except CacheTimeout:
             sys.stderr.write(
-                "An error ocurred clearing blender-downloader's cache.\n"
+                "An error happen clearing blender-downloader's cache.\n"
                 f"Please, submit an issue to {SCRIPT_NEW_ISSUE_URL} if the"
                 " problem persists.\n"
             )
