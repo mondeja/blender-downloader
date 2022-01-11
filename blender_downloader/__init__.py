@@ -220,6 +220,8 @@ def parse_args(args):
         if opts.blender_version is None:
             parser.print_help()
             sys.exit(1)
+        else:
+            opts.blender_version = opts.blender_version.lower()
 
         if opts.blender_version in {"stable", "lts", "nightly", "daily"}:
             opts.blender_version = discover_version_number_by_identifier(

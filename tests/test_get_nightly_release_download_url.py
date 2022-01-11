@@ -25,3 +25,5 @@ def test_get_nightly_release_download_url(operative_system, arch):
     else:
         url = get_url()
         assert f"/blender-{blender_version}-" in url
+        assert url.startswith("https://")
+        assert "." in url
