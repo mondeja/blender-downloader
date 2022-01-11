@@ -202,6 +202,7 @@ def parse_args(args):
     # operative system by function and assert that is valid
     if hasattr(opts.operative_system, "__call__"):
         opts.operative_system = opts.operative_system()
+    opts.operative_system = opts.operative_system.lower()
     if opts.operative_system not in {"linux", "macos", "windows"}:
         sys.stderr.write(
             f"Invalid operative system '{opts.operative_system}'. Must be"
