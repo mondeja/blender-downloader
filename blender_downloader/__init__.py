@@ -36,6 +36,10 @@ CACHE = Cache(
 )
 
 
+class BlenderVersionNotFound(RuntimeError):
+    pass
+
+
 def get_running_os():
     if sys.platform == "darwin":
         return "macos"
@@ -244,10 +248,7 @@ def parse_args(args):
         sys.exit(1)
 
     # assert compatible bits
-    if opts.bits == 32 and (
-        opts.blender_version == "stable"
-        or Version(opts.blender_version) > Version("2.80")
-    ):
+    if opts.bits == 32 and Version(opts.blender_version) > Version("2.80"):
         sys.stderr.write(
             "The latest Blender version with support for 32 bits systems is"
             " v2.80. Please, specify a more recent version of Blender.\n"
@@ -413,7 +414,7 @@ def _build_download_repo_release_file_validator(
 def get_legacy_release_download_url(
     blender_version, operative_system, bits, arch, use_cache=True
 ):
-    """Retrieves the download URL for a specific release version of Blender.
+    """Retrieves the download URL for a specific legacy release of Blender.
 
     Parameters
     ----------
@@ -448,15 +449,6 @@ def get_legacy_release_download_url(
 
     url = "https://download.blender.org/release/"
 
-    version_not_found_error_message = lambda: (
-        f"The release '{blender_version}' can't be located in official"
-        " Blender repositories.\nMake sure that you are passing a valid"
-        f" version.\nYou can check all valid releases at: {url}\n\n"
-        f"If you think that '{blender_version}' is a valid release and"
-        " this is a problem with the downloader,\nplease, report it to"
-        f" {SCRIPT_NEW_ISSUE_URL}\n"
-    )
-
     res = GET(url, use_cache=use_cache)
 
     version_path = f"Blender{major_minor_blender_version}/"
@@ -467,8 +459,7 @@ def get_legacy_release_download_url(
             break
 
     if not _version_path_found:
-        sys.stderr.write(version_not_found_error_message())
-        sys.exit(1)
+        raise BlenderVersionNotFound()
 
     major_minor_blender_release_url = f"{url}{version_path}"
 
@@ -504,8 +495,70 @@ def get_legacy_release_download_url(
         break
 
     if download_url is None:
-        sys.stderr.write(version_not_found_error_message())
-        sys.exit(1)
+        raise BlenderVersionNotFound()
+
+    return download_url
+
+
+def get_nightly_release_download_url(
+    blender_version, operative_system, arch, use_cache=True
+):
+    """Retrieves the download URL for a specific nightly release of Blender.
+
+    Parameters
+    ----------
+
+    blender_version : str
+      Version for which the URL will be discovered. Should be a valid version
+      of Blender, otherwise shows an error an the script will exit with 1 code.
+
+    operative_system : str
+      Operative system correspondent to the release.
+
+    bits : str
+      Number of bits of the system for the release.
+
+    arch : str
+      Identifier of the architecture for which the release will be retrieved.
+
+    use_cache : bool
+      Use cache requesting Blender repositories.
+    """
+    url = "https://builder.blender.org/download/daily/archive/"
+    res = GET(url, use_cache=use_cache)
+    urls = re.findall(rf'"({url}[^"]+)"', res)
+
+    expected_os_identifier = (
+        "darwin" if operative_system == "macos" else operative_system
+    )
+    expected_extension = {
+        "linux": "tar.xz",
+        "windows": "zip",
+        "macos": "dmg",
+    }[operative_system]
+
+    download_url = None
+
+    for url in urls:
+        if expected_os_identifier not in url:
+            continue
+        if f"/blender-{blender_version}-" not in url:
+            continue
+
+        arch_ext_split = url.split(f"{expected_os_identifier}.")[1].split("-")
+        version_ext = ".".join(arch_ext_split[-1].split(".")[1:])
+        if version_ext != expected_extension:
+            continue
+
+        version_arch = arch_ext_split[0]
+        if arch is not None and arch != version_arch:
+            continue
+
+        download_url = url
+        break
+
+    if download_url is None:
+        raise BlenderVersionNotFound()
 
     return download_url
 
@@ -650,7 +703,7 @@ def extract_release(zipped_filepath, quiet=False):
 
         with dmglib.attachedDiskImage(zipped_filepath) as mounted_dmg:
             contents_parent_dirpath = None
-            for dirpath, dirnames, files in os.walk(mounted_dmg[0]):
+            for dirpath, _, _ in os.walk(mounted_dmg[0]):
                 if (
                     os.path.basename(dirpath) == "Contents"
                     and "blender.app" in dirpath.lower()
@@ -928,14 +981,33 @@ def run(args=[]):
             opts.arch,
             use_cache=opts.use_cache,
         )
-
-    download_url = get_legacy_release_download_url(
-        opts.blender_version,
-        opts.operative_system,
-        opts.bits,
-        opts.arch,
-        use_cache=opts.use_cache,
-    )
+    try:
+        download_url = get_legacy_release_download_url(
+            opts.blender_version,
+            opts.operative_system,
+            opts.bits,
+            opts.arch,
+            use_cache=opts.use_cache,
+        )
+    except BlenderVersionNotFound:
+        try:
+            download_url = get_nightly_release_download_url(
+                opts.blender_version,
+                opts.operative_system,
+                opts.arch,
+                use_cache=opts.use_cache,
+            )
+        except BlenderVersionNotFound:
+            version_not_found_error_message = (
+                f"The release '{opts.blender_version}' can't be located in official"
+                " Blender repositories.\nMake sure that you are passing a valid"
+                f" version.\n\n"
+                f"If you think that '{opts.blender_version}' is a valid release and"
+                " this is a problem with blender-downloader, please, report it to"
+                f" {SCRIPT_NEW_ISSUE_URL}\n"
+            )
+            sys.stderr.write(version_not_found_error_message)
+            sys.exit(1)
     downloaded_release_filepath = download_release(
         download_url,
         opts.output_directory,
