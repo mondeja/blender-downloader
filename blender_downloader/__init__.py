@@ -139,7 +139,7 @@ def build_parser():
     parser.add_argument(
         "--bits",
         dest="bits",
-        default=64 if sys.maxsize > 2 ** 32 else 32,
+        default=64 if sys.maxsize > 2**32 else 32,
         type=int,
         help="Operative system bits. Keep in mind that Blender v2.80 was the"
         " latest release with support operative systems with 32 bits.",
