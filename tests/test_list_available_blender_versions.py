@@ -46,7 +46,10 @@ class BlenderVersion:
 @pytest.mark.parametrize("bits", (64, 32))
 @pytest.mark.parametrize("arch", (None, "arm64"))
 def test_list_available_blender_versions(
-    maximum_versions, operative_system, bits, arch
+    maximum_versions,
+    operative_system,
+    bits,
+    arch,
 ):
     mocked_stdout = io.StringIO()
     with contextlib.redirect_stdout(mocked_stdout):
@@ -58,11 +61,10 @@ def test_list_available_blender_versions(
 
     min_version_supported = BlenderVersion(MINIMUM_VERSION_SUPPPORTED)
 
-    for i, raw_version in enumerate(stdout_lines):
+    for raw_version in stdout_lines:
         version = BlenderVersion(raw_version)
         assert min_version_supported < version
 
-        if i > 2:  # first version is the stable one
-            if prev_version is not None:
-                assert version < prev_version
+        if prev_version is not None:
+            assert version < prev_version
         prev_version = version

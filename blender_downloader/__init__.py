@@ -22,7 +22,7 @@ from tqdm import tqdm
 __author__ = "mondeja"
 __description__ = "Multiplatform Blender portable release downloader script."
 __title__ = "blender-downloader"
-__version__ = "0.0.18"
+__version__ = "0.0.19"
 
 QUIET = False
 
@@ -879,11 +879,12 @@ def list_available_blender_versions(
         "stable",
         use_cache=use_cache,
     )
-    sys.stdout.write(f"{stable_version}\n")
     versions_found.append(stable_version)
-    n_versions += 1
     if maximum_versions < 3:
+        sys.stdout.write(f"{stable_version}\n")
         return 0
+    stable_Version = Version(stable_version)
+    _stable_version_printed = False
 
     url = "https://download.blender.org/release/"
     response_lines = GET(url, use_cache=use_cache).splitlines()
@@ -945,9 +946,17 @@ def list_available_blender_versions(
                 continue
 
             # print version
+            #   print stable version in their correct place
+            if Version(version) < stable_Version and not _stable_version_printed:
+                n_versions += 1
+                sys.stdout.write(f"{stable_version}\n")
+                _stable_version_printed = True
+                if n_versions >= maximum_versions:
+                    break
+
             versions_found.append(version)
-            n_versions += 1
             sys.stdout.write(f"{version}\n")
+            n_versions += 1
 
             if n_versions >= maximum_versions:
                 break
