@@ -22,12 +22,13 @@ from tqdm import tqdm
 __author__ = "mondeja"
 __description__ = "Multiplatform Blender portable release downloader script."
 __title__ = "blender-downloader"
-__version__ = "0.0.19"
+__version__ = "0.0.20"
 
 QUIET = False
 
 SCRIPT_NEW_ISSUE_URL = f"https://github.com/{__author__}/{__title__}/issues/new"
 BLENDER_MANUAL_VERSIONS_URL = "https://docs.blender.org/PROD/versions.json"
+BLENDER_DAILY_BUILDS_URL = "https://builder.blender.org/download/daily/"
 MINIMUM_VERSION_SUPPPORTED = "2.57"
 SUPPORTED_FILETYPES_EXTRACTION = [".bz2", ".gz", ".xz", ".zip", ".dmg"]
 NIGHLY_RELEASES_CACHE_EXPIRATION = 60 * 60 * 24  # 1 day
@@ -267,6 +268,33 @@ def parse_args(args):
     return opts
 
 
+def guess_stable_version_number_from_daily_builds_page(use_cache=True):
+    """Try to get the stable Blender version from the page displayed at
+    https://builder.blender.org/download/daily/
+
+    This method has been proved unstable in the past so must not be used
+    as the unique reliable source.
+
+    use_cache : bool
+      Use cache requesting Blender versions from Blender's builder page.
+    """
+    res = GET(
+        BLENDER_DAILY_BUILDS_URL,
+        expire=NIGHLY_RELEASES_CACHE_EXPIRATION,
+        use_cache=use_cache,
+    )
+
+    stable_Version = None
+    for line in res.split("<"):
+        line = line.lower()
+        if "stable" in line:
+            stable_version_match = re.search(r"blender-([^-]+)", line)
+            if stable_version_match is not None:
+                stable_Version = Version(stable_version_match.group(1))
+                break
+    return stable_Version
+
+
 def discover_version_number_by_identifier(identifier, use_cache=True):
     """Discover a Blender version number given an identifier.
 
@@ -278,33 +306,48 @@ def discover_version_number_by_identifier(identifier, use_cache=True):
     use_cache : bool
       Use cache requesting Blender versions from manual.
     """
-    res = GET(
-        BLENDER_MANUAL_VERSIONS_URL,
-        expire=NIGHLY_RELEASES_CACHE_EXPIRATION,
-        use_cache=use_cache,
-    )
-    versions_json = json.loads(res)
-
     if identifier == "stable":
-        latest_Version = None
-        for minor_version, version_data in versions_json.items():
-            if "dev" in version_data:
-                continue
+        # try to get stable version from Blender's builder page
+        latest_Version = guess_stable_version_number_from_daily_builds_page(
+            use_cache=use_cache,
+        )
 
-            minor_Version = Version(minor_version)
-            if latest_Version is None or minor_Version > latest_Version:
-                latest_Version = minor_Version
-
+        # fallback to versions JSON in documentation
         if latest_Version is None:
-            sys.stderr.write(
-                "Error trying to retrieve the stable release from Blender"
-                " repositories. Please, submit an issue to"
-                " {SCRIPT_NEW_ISSUE_URL}.\n"
+            versions_json = json.loads(
+                GET(
+                    BLENDER_MANUAL_VERSIONS_URL,
+                    expire=NIGHLY_RELEASES_CACHE_EXPIRATION,
+                    use_cache=use_cache,
+                )
             )
-            sys.exit(1)
+
+            latest_Version = None
+            for minor_version, version_data in versions_json.items():
+                if "dev" in version_data:
+                    continue
+
+                minor_Version = Version(minor_version)
+                if latest_Version is None or minor_Version > latest_Version:
+                    latest_Version = minor_Version
+
+            if latest_Version is None:
+                sys.stderr.write(
+                    "Error trying to retrieve the stable release from Blender"
+                    " repositories. Please, submit a report to"
+                    " {SCRIPT_NEW_ISSUE_URL}\n"
+                )
+                sys.exit(1)
     elif identifier in {"lts", "nightly", "daily"}:
         expected_substr_in_data = "lts" if identifier == "lts" else "dev"
         latest_Version = None
+        versions_json = json.loads(
+            GET(
+                BLENDER_MANUAL_VERSIONS_URL,
+                expire=NIGHLY_RELEASES_CACHE_EXPIRATION,
+                use_cache=use_cache,
+            )
+        )
 
         for minor_version, version_data in versions_json.items():
             if expected_substr_in_data not in version_data.lower():
@@ -977,7 +1020,7 @@ def run(args=[]):
         except CacheTimeout:
             sys.stderr.write(
                 "An error happen clearing blender-downloader's cache.\n"
-                f"Please, submit an issue to {SCRIPT_NEW_ISSUE_URL} if the"
+                f"Please, submit a report to {SCRIPT_NEW_ISSUE_URL} if the"
                 " problem persists.\n"
             )
             return 1
