@@ -707,51 +707,58 @@ def download_release(download_url, output_directory, quiet=False):
     output_directory : str
       Path to the directory in which the downloaded file will be stored.
     """
-    # get filename of downloaded file (maybe a zip, maybe a dmg...)
-    output_filename = os.path.basename(urlsplit(download_url).path)
-    output_filepath = os.path.join(output_directory, output_filename)
+    try:
+        # get filename of downloaded file (maybe a zip, maybe a dmg...)
+        output_filename = os.path.basename(urlsplit(download_url).path)
+        output_filepath = os.path.join(output_directory, output_filename)
 
-    if os.path.isfile(output_filepath):
-        sys.stderr.write(
-            f"There is already a file named as '{output_filename}' in the"
-            " directory in which Blender will be downloaded.\nPlease, remove"
-            " the file before execute blender-downloader.\n"
+        if os.path.isfile(output_filepath):
+            sys.stderr.write(
+                f"There is already a file named as '{output_filename}' in the"
+                " directory in which Blender will be downloaded.\nPlease, remove"
+                " the file before execute blender-downloader.\n"
+            )
+            sys.exit(1)
+
+        # create temporal blender-downloader directory if not exists to store
+        # extracted files
+        if not os.path.isdir(TEMPDIR):
+            os.mkdir(TEMPDIR)
+
+        tmp_output_filepath = os.path.join(TEMPDIR, output_filename)
+
+        chunksize = 8192
+        downloaded_size = chunksize
+        res = urlopen(Request(download_url))
+        total_size_bits = int(res.info()["Content-Length"])
+
+        progress_bar_kwargs = dict(
+            total=total_size_bits,
+            unit="B",
+            desc=f"Downloading '{output_filename}'",
+            unit_scale=True,
+            unit_divisor=1000,
+            miniters=1,
+            disable=quiet,
+            initial=chunksize,  # first chunk is written before entering while
         )
-        sys.exit(1)
-
-    # create temporal blender-downloader directory if not exists to store
-    # extracted files
-    if not os.path.isdir(TEMPDIR):
-        os.mkdir(TEMPDIR)
-    tmp_output_filepath = os.path.join(TEMPDIR, output_filename)
-
-    chunksize = 8192
-    downloaded_size = chunksize
-    res = urlopen(Request(download_url))
-    total_size_bits = int(res.info()["Content-Length"])
-
-    progress_bar_kwargs = dict(
-        total=total_size_bits,
-        unit="B",
-        desc=f"Downloading '{output_filename}'",
-        unit_scale=True,
-        unit_divisor=1000,
-        miniters=1,
-        disable=quiet,
-        initial=chunksize,  # first chunk is written before entering while
-    )
-    with tqdm(**progress_bar_kwargs) as progress_bar, open(
-        tmp_output_filepath, "wb"
-    ) as f:
-        data = res.read(chunksize)
-        f.write(data)
-        while data:
+        with tqdm(**progress_bar_kwargs) as progress_bar, open(
+            tmp_output_filepath, "wb"
+        ) as f:
             data = res.read(chunksize)
             f.write(data)
-            progress_bar.update(chunksize)
-            downloaded_size += chunksize
-            if downloaded_size >= total_size_bits:
-                break
+            while data:
+                data = res.read(chunksize)
+                f.write(data)
+                progress_bar.update(chunksize)
+                downloaded_size += chunksize
+                if downloaded_size >= total_size_bits:
+                    break
+    except KeyboardInterrupt:
+        sys.stderr.write("Download interrupted\n")
+        if os.path.isfile(tmp_output_filepath):
+            os.remove(tmp_output_filepath)
+        sys.exit(1)
 
     # move from temporal directory to the real output path
     os.rename(tmp_output_filepath, output_filepath)
@@ -774,171 +781,178 @@ def extract_release(zipped_filepath, quiet=False):
     Returns:
       str: Blender executable file path.
     """
-    zipped_filename = os.path.basename(zipped_filepath)
-    output_directory = os.path.abspath(os.path.dirname(zipped_filepath))
-    extension = os.path.splitext(zipped_filepath)[1]
+    try:
+        zipped_filename = os.path.basename(zipped_filepath)
+        output_directory = os.path.abspath(os.path.dirname(zipped_filepath))
+        extension = os.path.splitext(zipped_filepath)[1]
 
-    # filepath of the extracted directory, don't confuse it with
-    # `output_directory`, that is the directory where the file to extract
-    # is located
-    extracted_directory_filepath = None
+        # filepath of the extracted directory, don't confuse it with
+        # `output_directory`, that is the directory where the file to extract
+        # is located
+        extracted_directory_path = None
 
-    if extension == ".zip":
-        if not quiet:
-            sys.stderr.write(f"Decompressing '{zipped_filename}'...\n")
+        if extension == ".zip":
+            if not quiet:
+                sys.stderr.write(f"Decompressing '{zipped_filename}'...\n")
 
-        with zipfile.ZipFile(zipped_filepath, "r") as f:
-            namelist = f.namelist()
+            with zipfile.ZipFile(zipped_filepath, "r") as f:
+                namelist = f.namelist()
 
-            # ensure that Blender is extracted in a top level directory
-            #
-            # MacOS versions previous to 2.79 are released in a ZIP file
-            # with multiple directories and files in the root, which results
-            # in a messy extraction with a lot of files in the current
-            # working directory
-            root_dirnames = get_toplevel_dirnames_from_paths(namelist)
+                # ensure that Blender is extracted in a top level directory
+                #
+                # MacOS versions previous to 2.79 are released in a ZIP file
+                # with multiple directories and files in the root, which results
+                # in a messy extraction with a lot of files in the current
+                # working directory
+                root_dirnames = get_toplevel_dirnames_from_paths(namelist)
 
-            # `not root_dirnames` when only files are found in the ZIP
-            if len(root_dirnames) > 1 or not root_dirnames:
-                output_directory = os.path.join(output_directory, "Blender")
+                # `not root_dirnames` when only files are found in the ZIP
+                if len(root_dirnames) > 1 or not root_dirnames:
+                    output_directory = os.path.join(output_directory, "Blender")
+                else:
+                    output_directory = os.path.join(output_directory, root_dirnames[0])
+
+                # don't overwrite existing non empty directory extracting
+                if os.path.isdir(output_directory) and os.listdir(output_directory):
+                    sys.stderr.write(
+                        f"The directory '{output_directory}' where the files will"
+                        " be extracted already exists and is not empty. Extraction"
+                        " skipped.\n"
+                    )
+                    sys.exit(1)
+
+                extracted_directory_path = output_directory
+
+                progress_bar_kwargs = dict(
+                    total=len(namelist),
+                    desc=f"Extracting '{zipped_filename}'",
+                    iterable=namelist,
+                    disable=quiet,
+                )
+                for file in tqdm(**progress_bar_kwargs):
+                    f.extract(member=file, path=output_directory)
+
+        elif extension in [".bz2", ".gz", ".xz", ".tar.gz", ".tar.bz2", ".tar.xz"]:
+            if not quiet:
+                sys.stderr.write(f"Decompressing '{zipped_filename}'...\n")
+
+            with tarfile.open(zipped_filepath, "r") as f:
+                files = f.getmembers()
+                paths = [file.name for file in files]
+
+                root_dirnames = get_toplevel_dirnames_from_paths(paths)
+
+                if len(root_dirnames) > 1 or not root_dirnames:
+                    output_directory = os.path.join(output_directory, "Blender")
+                else:
+                    output_directory = os.path.join(output_directory, root_dirnames[0])
+
+                extracted_directory_path = output_directory
+
+                progress_bar_kwargs = dict(
+                    total=len(files),
+                    desc=f"Extracting '{zipped_filename}'",
+                    iterable=files,
+                    disable=quiet,
+                )
+                for file in tqdm(**progress_bar_kwargs):
+                    f.extract(member=file, path=output_directory)
+
+        elif extension == ".dmg":
+            running_os = get_running_os()
+            if running_os != "macos":
+                # we are not in MacOS, so we need the binaries dmg2img and 7z
+                # to decompress the `.dmg` file downloaded
+                dmg2img, sevenz = shutil.which("dmg2img"), shutil.which("7z")
+                if dmg2img is None or sevenz is None:
+                    required_programs = []
+                    if dmg2img is None:
+                        required_programs.append("'dmg2img'")
+                    if sevenz is None:
+                        required_programs.append("'7z'")
+                    plural_suffix = "s" if len(required_programs) > 1 else ""
+                    sys.stderr.write(
+                        f"You need to install the program{plural_suffix}"
+                        f" {' and '.join(required_programs)} to extract the"
+                        f" DMG Blender release located at {zipped_filepath}"
+                        f" inside a {running_os.capitalize()} platform.\n"
+                    )
+                    sys.exit(1)
+
+                img_filepath = removesuffix(zipped_filepath, "dmg") + "img"
+                if os.path.isfile(img_filepath):
+                    os.remove(img_filepath)
+
+                dmg2img_proc = subprocess.Popen(
+                    ["dmg2img", zipped_filepath],
+                    stderr=sys.stderr,
+                    stdout=sys.stdout,
+                    env=os.environ,
+                )
+                dmg2img_proc.communicate()
+                if dmg2img_proc.returncode != 0:
+                    sys.exit(dmg2img_proc.returncode)
+
+                seven7_proc = subprocess.Popen(
+                    ["7z", "x", img_filepath],
+                    stderr=sys.stderr,
+                    stdout=sys.stdout,
+                    env=os.environ,
+                )
+                seven7_proc.communicate()
+                if seven7_proc.returncode != 0:
+                    sys.exit(seven7_proc.returncode)
+
+                extracted_directory_path = os.path.join(output_directory, "Blender")
             else:
-                output_directory = os.path.join(output_directory, root_dirnames[0])
-
-            # don't overwrite existing non empty directory extracting
-            if os.path.isdir(output_directory) and os.listdir(output_directory):
-                sys.stderr.write(
-                    f"The directory '{output_directory}' where the files will"
-                    " be extracted already exists and is not empty. Extraction"
-                    " skipped.\n"
+                # we are inside MacOS, use the DMG CLI utility included in
+                # the system through the dmglib Python wrapper
+                extracted_directory_path = os.path.join(
+                    output_directory,
+                    removesuffix(os.path.basename(zipped_filepath), ".dmg"),
                 )
-                sys.exit(1)
 
-            extracted_directory_filepath = output_directory
+                import dmglib
 
-            progress_bar_kwargs = dict(
-                total=len(namelist),
-                desc=f"Extracting '{zipped_filename}'",
-                iterable=namelist,
-                disable=quiet,
-            )
-            for file in tqdm(**progress_bar_kwargs):
-                f.extract(member=file, path=output_directory)
-
-    elif extension in [".bz2", ".gz", ".xz", ".tar.gz", ".tar.bz2", ".tar.xz"]:
-        if not quiet:
-            sys.stderr.write(f"Decompressing '{zipped_filename}'...\n")
-
-        with tarfile.open(zipped_filepath, "r") as f:
-            files = f.getmembers()
-            paths = [file.name for file in files]
-
-            root_dirnames = get_toplevel_dirnames_from_paths(paths)
-
-            if len(root_dirnames) > 1 or not root_dirnames:
-                output_directory = os.path.join(output_directory, "Blender")
+                with dmglib.attachedDiskImage(zipped_filepath) as mounted_dmg:
+                    contents_parent_dirpath = None
+                    for dirpath, _, _ in os.walk(mounted_dmg[0]):
+                        if (
+                            os.path.basename(dirpath) == "Contents"
+                            and "blender.app" in dirpath.lower()
+                        ):
+                            contents_parent_dirpath = os.path.abspath(
+                                os.path.dirname(dirpath),
+                            )
+                            break
+                    shutil.copytree(
+                        contents_parent_dirpath,
+                        extracted_directory_path,
+                    )
+        else:
+            if "-e" in sys.argv and "--extract" not in sys.argv:
+                extract_option = "-e"
+            elif "-e" not in sys.argv and "--extract" in sys.argv:
+                extract_option = "--extract"
             else:
-                output_directory = os.path.join(output_directory, root_dirnames[0])
-
-            extracted_directory_filepath = output_directory
-
-            progress_bar_kwargs = dict(
-                total=len(files),
-                desc=f"Extracting '{zipped_filename}'",
-                iterable=files,
-                disable=quiet,
+                extract_option = "-e/--extract"
+            sys.stderr.write(
+                f"File extension '{extension}' extraction not supported by"
+                f" '{extract_option}' command line option.\n"
             )
-            for file in tqdm(**progress_bar_kwargs):
-                f.extract(member=file, path=output_directory)
-
-    elif extension == ".dmg":
-        running_os = get_running_os()
-        if running_os != "macos":
-            # we are not in MacOS, so we need the binaries dmg2img and 7z
-            # to decompress the `.dmg` file downloaded
-            dmg2img, sevenz = shutil.which("dmg2img"), shutil.which("7z")
-            if dmg2img is None or sevenz is None:
-                required_programs = []
-                if dmg2img is None:
-                    required_programs.append("'dmg2img'")
-                if sevenz is None:
-                    required_programs.append("'7z'")
-                plural_suffix = "s" if len(required_programs) > 1 else ""
-                sys.stderr.write(
-                    f"You need to install the program{plural_suffix}"
-                    f" {' and '.join(required_programs)} to extract the"
-                    f" DMG Blender release located at {zipped_filepath}"
-                    f" inside a {running_os.capitalize()} platform.\n"
-                )
-                sys.exit(1)
-
-            img_filepath = removesuffix(zipped_filepath, "dmg") + "img"
-            if os.path.isfile(img_filepath):
-                os.remove(img_filepath)
-
-            dmg2img_proc = subprocess.Popen(
-                ["dmg2img", zipped_filepath],
-                stderr=sys.stderr,
-                stdout=sys.stdout,
-                env=os.environ,
-            )
-            dmg2img_proc.communicate()
-            if dmg2img_proc.returncode != 0:
-                sys.exit(dmg2img_proc.returncode)
-
-            seven7_proc = subprocess.Popen(
-                ["7z", "x", img_filepath],
-                stderr=sys.stderr,
-                stdout=sys.stdout,
-                env=os.environ,
-            )
-            seven7_proc.communicate()
-            if seven7_proc.returncode != 0:
-                sys.exit(seven7_proc.returncode)
-
-            extracted_directory_filepath = os.path.join(output_directory, "Blender")
-        else:
-            # we are inside MacOS, use the DMG CLI utility included in
-            # the system through the dmglib Python wrapper
-            extracted_directory_filepath = os.path.join(
-                output_directory,
-                removesuffix(os.path.basename(zipped_filepath), ".dmg"),
-            )
-
-            import dmglib
-
-            with dmglib.attachedDiskImage(zipped_filepath) as mounted_dmg:
-                contents_parent_dirpath = None
-                for dirpath, _, _ in os.walk(mounted_dmg[0]):
-                    if (
-                        os.path.basename(dirpath) == "Contents"
-                        and "blender.app" in dirpath.lower()
-                    ):
-                        contents_parent_dirpath = os.path.abspath(
-                            os.path.dirname(dirpath),
-                        )
-                        break
-                shutil.copytree(
-                    contents_parent_dirpath,
-                    extracted_directory_filepath,
-                )
-    else:
-        if "-e" in sys.argv and "--extract" not in sys.argv:
-            extract_option = "-e"
-        elif "-e" not in sys.argv and "--extract" in sys.argv:
-            extract_option = "--extract"
-        else:
-            extract_option = "-e/--extract"
-        sys.stderr.write(
-            f"File extension '{extension}' extraction not supported by"
-            f" '{extract_option}' command line option.\n"
-        )
+            sys.exit(1)
+    except KeyboardInterrupt:
+        sys.stderr.write("Extraction interrupted\n")
+        # remove the directory being created, if exists
+        if os.path.isdir(extracted_directory_path):
+            shutil.rmtree(extracted_directory_path)
         sys.exit(1)
 
-    return extracted_directory_filepath
+    return extracted_directory_path
 
 
 def print_executables(
-    extracted_directory_filepath,
+    extracted_directory_path,
     operative_system,
     print_blender_executable,
     print_python_executable,
@@ -950,7 +964,7 @@ def print_executables(
     Parameters
     ----------
 
-    extracted_directory_filepath : bool
+    extracted_directory_path : bool
       Blender release directory.
 
     operative_system : str
@@ -966,12 +980,12 @@ def print_executables(
     # search executables by operative system
     if operative_system == "linux":
         blender_executable_filepath = os.path.join(
-            extracted_directory_filepath,
+            extracted_directory_path,
             "blender",
         )
 
         python_executable_filepath = None
-        for dirpath, dirnames, files in os.walk(extracted_directory_filepath):
+        for dirpath, dirnames, files in os.walk(extracted_directory_path):
             if os.path.basename(dirpath) == "bin":
                 for filename in files:
                     if filename.startswith("python"):
@@ -983,12 +997,12 @@ def print_executables(
                 break
     elif operative_system == "windows":
         blender_executable_filepath = os.path.join(
-            extracted_directory_filepath,
+            extracted_directory_path,
             "blender.exe",
         )
 
         python_executable_filepath = None
-        for dirpath, dirnames, files in os.walk(extracted_directory_filepath):
+        for dirpath, dirnames, files in os.walk(extracted_directory_path):
             if os.path.basename(dirpath) == "bin":
                 for filename in files:
                     if os.path.splitext(filename)[1] == ".exe":
@@ -1001,7 +1015,7 @@ def print_executables(
                     break
     else:  # operative_system == "macos"
         python_executable_filepath, blender_executable_filepath = (None, None)
-        for dirpath, dirnames, files in os.walk(extracted_directory_filepath):
+        for dirpath, dirnames, files in os.walk(extracted_directory_path):
             dirname = os.path.basename(dirpath)
             if dirname == "bin":
                 for filename in files:
@@ -1207,13 +1221,16 @@ def run(args=[]):
             return 0
 
     if opts.list:
-        return list_available_blender_versions(
-            opts.list,
-            opts.operative_system,
-            opts.bits,
-            opts.arch,
-            use_cache=opts.use_cache,
-        )
+        try:
+            return list_available_blender_versions(
+                opts.list,
+                opts.operative_system,
+                opts.bits,
+                opts.arch,
+                use_cache=opts.use_cache,
+            )
+        except KeyboardInterrupt:
+            return 1
     try:
         download_url = get_legacy_release_download_url(
             opts.blender_version,
@@ -1240,28 +1257,44 @@ def run(args=[]):
                 f" {SCRIPT_NEW_ISSUE_URL}\n"
             )
             sys.stderr.write(version_not_found_error_message)
-            sys.exit(1)
-    downloaded_release_filepath = download_release(
-        download_url,
-        opts.output_directory,
-        quiet=QUIET,
-    )
-    if opts.extract:
-        extracted_directory_filepath = extract_release(
-            downloaded_release_filepath,
+            return 1
+        except KeyboardInterrupt:
+            return 1
+    except KeyboardInterrupt:
+        return 1
+
+    downloaded_release_filepath = None
+    try:
+        downloaded_release_filepath = download_release(
+            download_url,
+            opts.output_directory,
             quiet=QUIET,
         )
-
-        if opts.print_blender_executable or opts.print_python_executable:
-            print_executables(
-                extracted_directory_filepath,
-                opts.operative_system,
-                opts.print_blender_executable,
-                opts.print_python_executable,
+        if opts.extract:
+            extracted_directory_path = extract_release(
+                downloaded_release_filepath,
+                quiet=QUIET,
             )
 
-        if opts.remove_compressed:
+            if opts.print_blender_executable or opts.print_python_executable:
+                print_executables(
+                    extracted_directory_path,
+                    opts.operative_system,
+                    opts.print_blender_executable,
+                    opts.print_python_executable,
+                )
+
+            if opts.remove_compressed:
+                os.remove(downloaded_release_filepath)
+    except KeyboardInterrupt:
+        # other keyboard interruption signals are handled inside the
+        # functions, which perform the corresponding cleaning in each
+
+        # clean downloaded file if we were not removed it
+        if opts.remove_compressed and os.path.isfile(downloaded_release_filepath):
             os.remove(downloaded_release_filepath)
+
+        return 1
 
     return 0
 
