@@ -38,7 +38,7 @@ CACHE = Cache(
 )
 
 
-def removesuffix(string, suffix):
+def removesuffix(string, suffix):  # polyfill for Python < 3.9
     if string.endswith(suffix):
         return string[: -len(suffix)]
     return string
