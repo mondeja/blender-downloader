@@ -28,14 +28,14 @@ __version__ = "0.0.21"
 QUIET = False
 
 TEMPDIR = os.path.join(tempfile.gettempdir(), "blender-downloader")
+DATA_DIR = user_data_dir(appname=__title__, appauthor=__author__, version=__version__)
+CACHE = Cache(DATA_DIR)
+
 SCRIPT_NEW_ISSUE_URL = f"https://github.com/{__author__}/{__title__}/issues/new"
 BLENDER_MANUAL_VERSIONS_URL = "https://docs.blender.org/PROD/versions.json"
 BLENDER_DAILY_BUILDS_URL = "https://builder.blender.org/download/daily/"
 MINIMUM_VERSION_SUPPPORTED = "2.57"
 NIGHLY_RELEASES_CACHE_EXPIRATION = 60 * 60 * 24  # 1 day
-CACHE = Cache(
-    user_data_dir(appname=__title__, appauthor=__author__, version=__version__)
-)
 
 
 def removesuffix(string, suffix):  # polyfill for Python < 3.9
@@ -125,6 +125,18 @@ def get_toplevel_dirnames_from_paths(paths):
                 parent, _ = os.path.split(previous_parent)
             toplevel_dirnames.append(previous_parent)
     return toplevel_dirnames
+
+
+def clean_other_versions_cache():
+    """Remove the cache for other versions of blender-downloader
+    installed. Only has sense to execute a single version, the
+    latest.
+    """
+    caches_dir = os.path.abspath(os.path.dirname(DATA_DIR))
+    for dirname in os.listdir(caches_dir):
+        if dirname != __version__:
+            dirpath = os.path.join(caches_dir, dirname)
+            shutil.rmtree(dirpath)
 
 
 def build_parser():
@@ -335,6 +347,7 @@ def parse_args(args):
 
     if opts.use_cache:
         CACHE.expire()  # remove expired items from cache
+        clean_other_versions_cache()
 
     return opts
 
