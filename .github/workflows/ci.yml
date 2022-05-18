@@ -36,7 +36,7 @@ jobs:
           python -m pip install .[test]
           pip list
       - name: Test with pytest
-        run: pytest -svv --cov=blender_downloader --cov-config=setup.cfg
+        run: pytest -svv
       #- name: Coveralls
         #run: coveralls
         #env:
