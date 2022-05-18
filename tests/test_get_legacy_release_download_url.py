@@ -8,12 +8,11 @@ import re
 from urllib.request import urlsplit
 
 import pytest
-from pkg_resources import parse_version
-from pkg_resources.extern.packaging.version import Version
 
 from blender_downloader import (
     MINIMUM_VERSION_SUPPPORTED,
     SUPPORTED_FILETYPES_EXTRACTION,
+    BlenderVersion,
     get_legacy_release_download_url,
 )
 
@@ -63,9 +62,9 @@ from blender_downloader import (
 @pytest.mark.parametrize("bits", (32, 64))
 @pytest.mark.parametrize("arch", (None, "arm64", "i686"))
 def test_get_legacy_release_download_url(blender_version, operative_system, bits, arch):
-    blender_Version = parse_version(blender_version)
+    blender_Version = BlenderVersion(blender_version)
 
-    if blender_Version < Version(MINIMUM_VERSION_SUPPPORTED):
+    if blender_Version < BlenderVersion(MINIMUM_VERSION_SUPPPORTED):
         mocked_stderr = io.StringIO()
         with pytest.raises(SystemExit):
             with contextlib.redirect_stderr(mocked_stderr):
@@ -104,99 +103,99 @@ def test_get_legacy_release_download_url(blender_version, operative_system, bits
         )
 
     if operative_system == "macos":
-        if blender_Version >= Version("2.93"):
+        if blender_Version >= BlenderVersion("2.93"):
             if arch in ["x64", "arm64"]:
                 assert_url(f"{blender_version}-macos-{arch}.dmg")
             else:
                 assert_url("{blender_version}-macos-x64.dmg")
-        elif blender_Version >= Version("2.83.14") and blender_Version < Version(
-            "2.84"
-        ):
+        elif blender_Version >= BlenderVersion(
+            "2.83.14"
+        ) and blender_Version < BlenderVersion("2.84"):
             assert_url("{blender_version}-macos-x64.dmg")
-        elif blender_Version > Version("2.79"):
+        elif blender_Version > BlenderVersion("2.79"):
             assert_url("{blender_version}-macOS.dmg")
-        elif blender_Version == Version("2.79"):
+        elif blender_Version == BlenderVersion("2.79"):
             assert_url("{blender_version}-macOS-10.6.tar.gz")
-        elif blender_Version == Version("2.71"):
+        elif blender_Version == BlenderVersion("2.71"):
             if bits == 32:
                 assert_url("{blender_version}-OSX_10.6-j2k-fix-i386.zip")
             else:
                 assert_url("{blender_version}-OSX_10.6-j2k-fix-x86_64.zip")
-        elif blender_Version < Version("2.60"):
+        elif blender_Version < BlenderVersion("2.60"):
             if bits == 32:
                 assert_url("{blender_version}-OSX_10.5_i386.zip")
             else:
                 assert_url("{blender_version}-OSX_10.5_x86_64.zip")
-        elif blender_Version == Version("2.60"):
+        elif blender_Version == BlenderVersion("2.60"):
             if bits == 32:
                 assert_url("{blender_version}-OSX_10.5_i386.zip")
             else:
                 assert_url("{blender_version}-OSX_10.6_x86_64.zip")
-        elif blender_Version < Version("2.64"):
+        elif blender_Version < BlenderVersion("2.64"):
             if bits == 32:
                 assert_url("{blender_version}-release-OSX_10.5_i386.zip")
             else:
                 assert_url("{blender_version}-release-OSX_10.5_x86_64.zip")
-        elif blender_Version < Version("2.65"):
+        elif blender_Version < BlenderVersion("2.65"):
             if bits == 32:
                 assert_url("{blender_version}-release-OSX_10.6_i386.zip")
             else:
                 assert_url("{blender_version}-release-OSX_10.6_x86_64.zip")
 
-        elif blender_Version < Version("2.71"):
+        elif blender_Version < BlenderVersion("2.71"):
             if bits == 32:
                 assert_url("{blender_version}-OSX_10.6-i386.zip")
             else:
                 assert_url("{blender_version}-OSX_10.6-x86_64.zip")
-        elif blender_Version < Version("2.79"):
+        elif blender_Version < BlenderVersion("2.79"):
             assert_url("{blender_version}-OSX_10.6-x86_64.zip")
-        else:  # Version("2.71") < blender_Version < Version("2.79")
+        else:  # BlenderVersion("2.71") < blender_Version < BlenderVersion("2.79")
             if bits == 32:
                 assert_url("{blender_version}-OSX_10.6-i386.zip")
             else:
                 assert_url("{blender_version}-OSX_10.6-x86_64.zip")
     elif operative_system == "windows":
-        if blender_Version >= Version("2.93"):
+        if blender_Version >= BlenderVersion("2.93"):
             assert_url("{blender_version}-windows-x64.zip")
-        elif blender_Version >= Version("2.83.14") and blender_Version < Version(
-            "2.84"
-        ):
+        elif blender_Version >= BlenderVersion(
+            "2.83.14"
+        ) and blender_Version < BlenderVersion("2.84"):
             assert_url("{blender_version}-windows-x64.zip")
-        elif blender_Version > Version("2.80"):
+        elif blender_Version > BlenderVersion("2.80"):
             assert_url("{blender_version}-windows64.zip")
-        elif blender_Version > Version("2.65"):
+        elif blender_Version > BlenderVersion("2.65"):
             assert_url("{blender_version}-windows{bits}.zip")
-        elif blender_Version > Version("2.60"):
+        elif blender_Version > BlenderVersion("2.60"):
             assert_url("{blender_version}-release-windows{bits}.zip")
-        else:  # blender_Version < Version("2.61")
+        else:  # blender_Version < BlenderVersion("2.61")
             assert_url("{blender_version}-windows{bits}.zip")
     else:  # operative_system == "linux":
-        if blender_Version >= Version("2.93"):
+        if blender_Version >= BlenderVersion("2.93"):
             assert_url("{blender_version}-linux-x64.tar.xz")
-        elif blender_Version >= Version("2.83.14") and blender_Version < Version(
-            "2.84"
-        ):
+        elif blender_Version >= BlenderVersion(
+            "2.83.14"
+        ) and blender_Version < BlenderVersion("2.84"):
             assert_url("{blender_version}-linux-x64.tar.xz")
-        elif blender_Version > Version("2.81"):
+        elif blender_Version > BlenderVersion("2.81"):
             assert_url("{blender_version}-linux64.tar.xz")
-        elif blender_Version == Version("2.81"):
+        elif blender_Version == BlenderVersion("2.81"):
             assert_url("{blender_version}-linux-glibc217-x86_64.tar.bz2")
-        elif blender_Version == Version("2.80"):
+        elif blender_Version == BlenderVersion("2.80"):
             if bits == 32:
                 assert_url("{blender_version}-linux-glibc224-i686.tar.bz2")
             else:
                 assert_url("{blender_version}-linux-glibc217-x86_64.tar.bz2")
-        elif blender_Version == Version("2.79"):
+        elif blender_Version == BlenderVersion("2.79"):
             if bits == 32:
                 assert_url("{blender_version}-linux-glibc219-i686.tar.bz2")
             else:
                 assert_url("{blender_version}-linux-glibc219-x86_64.tar.bz2")
-        elif blender_Version < Version("2.65"):
+        elif blender_Version < BlenderVersion("2.65"):
             if bits == 32:
                 assert_url("{blender_version}-linux-glibc27-i686.tar.bz2")
             else:
                 assert_url("{blender_version}-linux-glibc27-x86_64.tar.bz2")
-        else:  # Version("2.64") < blender_Version < Version("2.79")
+        else:  # BlenderVersion("2.64") < blender_Version < BlenderVersion("2.79")
             if bits == 32:
                 assert_url("{blender_version}-linux-glibc211-i686.tar.bz2")
             else:
