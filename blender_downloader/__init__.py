@@ -31,7 +31,6 @@ SCRIPT_NEW_ISSUE_URL = f"https://github.com/{__author__}/{__title__}/issues/new"
 BLENDER_MANUAL_VERSIONS_URL = "https://docs.blender.org/PROD/versions.json"
 BLENDER_DAILY_BUILDS_URL = "https://builder.blender.org/download/daily/"
 MINIMUM_VERSION_SUPPPORTED = "2.57"
-SUPPORTED_FILETYPES_EXTRACTION = [".bz2", ".gz", ".tar.gz", ".xz", ".zip", ".dmg"]
 NIGHLY_RELEASES_CACHE_EXPIRATION = 60 * 60 * 24  # 1 day
 CACHE = Cache(
     user_data_dir(appname=__title__, appauthor=__author__, version=__version__)
@@ -779,7 +778,8 @@ def extract_release(zipped_filepath, quiet=False):
             # working directory
             root_dirnames = get_toplevel_dirnames_from_paths(namelist)
 
-            if len(root_dirnames) > 1:
+            # `not root_dirnames` when only files are found in the ZIP
+            if len(root_dirnames) > 1 or not root_dirnames:
                 output_directory = os.path.join(output_directory, "Blender")
             else:
                 output_directory = os.path.join(output_directory, root_dirnames[0])
@@ -804,7 +804,7 @@ def extract_release(zipped_filepath, quiet=False):
             for file in tqdm(**progress_bar_kwargs):
                 f.extract(member=file, path=output_directory)
 
-    elif extension in [".bz2", ".gz", ".tar.gz", ".xz"]:
+    elif extension in [".bz2", ".gz", ".xz", ".tar.gz", ".tar.bz2", ".tar.xz"]:
         if not quiet:
             sys.stderr.write(f"Decompressing '{zipped_filename}'...\n")
 
@@ -814,7 +814,7 @@ def extract_release(zipped_filepath, quiet=False):
 
             root_dirnames = get_toplevel_dirnames_from_paths(paths)
 
-            if len(root_dirnames) > 1:
+            if len(root_dirnames) > 1 or not root_dirnames:
                 output_directory = os.path.join(output_directory, "Blender")
             else:
                 output_directory = os.path.join(output_directory, root_dirnames[0])
@@ -871,7 +871,7 @@ def extract_release(zipped_filepath, quiet=False):
             extract_option = "-e/--extract"
         sys.stderr.write(
             f"File extension '{extension}' extraction not supported by"
-            f" '{extract_option}'\n"
+            f" '{extract_option}' command line option.\n"
         )
         sys.exit(1)
 

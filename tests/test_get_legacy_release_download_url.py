@@ -8,10 +8,10 @@ import re
 from urllib.request import urlsplit
 
 import pytest
+from testing_utils import SUPPORTED_EXTENSIONS_FOR_EXTRACTION
 
 from blender_downloader import (
     MINIMUM_VERSION_SUPPPORTED,
-    SUPPORTED_FILETYPES_EXTRACTION,
     BlenderVersion,
     get_legacy_release_download_url,
 )
@@ -203,4 +203,4 @@ def test_get_legacy_release_download_url(blender_version, operative_system, bits
 
     # check that filetype is supported for extraction
     extension = os.path.splitext(os.path.basename(urlsplit(url).path))[1]
-    assert extension in SUPPORTED_FILETYPES_EXTRACTION
+    assert extension in SUPPORTED_EXTENSIONS_FOR_EXTRACTION
