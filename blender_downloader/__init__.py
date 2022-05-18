@@ -15,7 +15,6 @@ from urllib.request import Request, urlopen, urlsplit
 
 from appdirs import user_data_dir
 from diskcache import Cache, Timeout as CacheTimeout
-from pkg_resources.extern.packaging.version import Version
 from tqdm import tqdm
 
 
@@ -35,6 +34,51 @@ NIGHLY_RELEASES_CACHE_EXPIRATION = 60 * 60 * 24  # 1 day
 CACHE = Cache(
     user_data_dir(appname=__title__, appauthor=__author__, version=__version__)
 )
+
+
+class BlenderVersion:
+    """Blender versions object for easy comparations support."""
+
+    def __init__(self, raw):
+        self.raw = raw
+        self.version_info = []
+        self.alphas = []
+
+        for num_or_alpha in raw.split("."):
+            num = ""
+            for char in num_or_alpha:
+                if char.isdigit() and not self.alphas:
+                    num += char
+                else:
+                    self.alphas.append(char)
+            if num:
+                self.version_info.append(int(num))
+        for alpha in self.alphas:
+            if alpha.isdigit():  # digits as alphas like '3' in '2.80rc3'
+                self.version_info.append(int(alpha))
+            else:
+                self.version_info.append(ord(alpha))
+
+    def __lt__(self, other):
+        return self.version_info < other.version_info
+
+    def __le__(self, other):
+        return self.version_info <= other.version_info
+
+    def __gt__(self, other):
+        return self.version_info > other.version_info
+
+    def __ge__(self, other):
+        return self.version_info >= other.version_info
+
+    def __eq__(self, other):
+        return self.version_info == other.version_info
+
+    def __str__(self):
+        return self.raw
+
+    def __repr__(self):
+        return f'BlenderVersion("{self.raw}")'
 
 
 class BlenderVersionNotFound(RuntimeError):
@@ -230,7 +274,7 @@ def parse_args(args):
                 opts.blender_version,
                 use_cache=opts.use_cache,
             )
-        elif Version(opts.blender_version) >= Version("2.83"):
+        elif BlenderVersion(opts.blender_version) >= BlenderVersion("2.83"):
             opts.blender_version = normalize_version(opts.blender_version)
     else:
         opts.blender_version = None
@@ -252,7 +296,9 @@ def parse_args(args):
         sys.exit(1)
 
     # assert compatible bits
-    if opts.bits == 32 and Version(opts.blender_version) > Version("2.80"):
+    if opts.bits == 32 and BlenderVersion(opts.blender_version) > BlenderVersion(
+        "2.80"
+    ):
         sys.stderr.write(
             "The latest Blender version with support for 32 bits systems is"
             " v2.80. Please, specify a more recent version of Blender.\n"
@@ -290,7 +336,7 @@ def guess_stable_version_number_from_daily_builds_page(use_cache=True):
         if "stable" in line:
             stable_version_match = re.search(r"blender-([^-]+)", line)
             if stable_version_match is not None:
-                stable_Version = Version(stable_version_match.group(1))
+                stable_Version = BlenderVersion(stable_version_match.group(1))
                 break
     return stable_Version
 
@@ -327,7 +373,7 @@ def discover_version_number_by_identifier(identifier, use_cache=True):
                 if "dev" in version_data:
                     continue
 
-                minor_Version = Version(minor_version)
+                minor_Version = BlenderVersion(minor_version)
                 if latest_Version is None or minor_Version > latest_Version:
                     latest_Version = minor_Version
 
@@ -352,7 +398,7 @@ def discover_version_number_by_identifier(identifier, use_cache=True):
         for minor_version, version_data in versions_json.items():
             if expected_substr_in_data not in version_data.lower():
                 continue
-            minor_Version = Version(minor_version)
+            minor_Version = BlenderVersion(minor_version)
             if latest_Version is None or minor_Version > latest_Version:
                 latest_Version = minor_Version
     else:
@@ -369,19 +415,19 @@ def _build_download_repo_expected_os_identifier(
     major_minor_blender_Version,
 ):
     if operative_system == "macos":
-        if major_minor_blender_Version < Version("2.61"):
+        if major_minor_blender_Version < BlenderVersion("2.61"):
             expected_os_identifier = "OSX"
-        elif major_minor_blender_Version < Version("2.65"):
+        elif major_minor_blender_Version < BlenderVersion("2.65"):
             expected_os_identifier = "release-OSX"
-        elif major_minor_blender_Version < Version("2.79"):
+        elif major_minor_blender_Version < BlenderVersion("2.79"):
             # previous to v2.79, macOS was identified by "OSX"
             expected_os_identifier = "OSX"
         else:
             expected_os_identifier = "mac"  # some macOS, other macos
     elif operative_system == "windows":
-        if major_minor_blender_Version < Version("2.61"):
+        if major_minor_blender_Version < BlenderVersion("2.61"):
             expected_os_identifier = "windows"
-        elif major_minor_blender_Version < Version("2.66"):
+        elif major_minor_blender_Version < BlenderVersion("2.66"):
             expected_os_identifier = "release-windows"
         else:
             expected_os_identifier = operative_system
@@ -400,7 +446,7 @@ def _build_download_repo_release_file_validator(
 
         def valid_release_file(filename):
             # without 32 bits support
-            if major_minor_blender_Version > Version("2.80"):
+            if major_minor_blender_Version > BlenderVersion("2.80"):
                 if not filename.endswith(".zip"):
                     return False
             else:
@@ -410,14 +456,14 @@ def _build_download_repo_release_file_validator(
 
     elif operative_system == "linux":
         # before v2.82, Linux releases was distributed in .tar.bz2
-        if major_minor_blender_Version < Version("2.82"):
+        if major_minor_blender_Version < BlenderVersion("2.82"):
             compressed_ext = ".tar.bz2"
         else:
             compressed_ext = ".tar.xz"
 
         def valid_release_file(filename):
             # without 32 bits support
-            if major_minor_blender_Version > Version("2.80"):
+            if major_minor_blender_Version > BlenderVersion("2.80"):
                 if not filename.endswith(compressed_ext):
                     return False
             else:
@@ -427,21 +473,21 @@ def _build_download_repo_release_file_validator(
             return True
 
     else:  # operative_system == "macos"
-        if major_minor_blender_Version < Version("2.79"):
+        if major_minor_blender_Version < BlenderVersion("2.79"):
             # previous to v2.79, macos release was distributed in .zip
             compressed_ext = ".zip"
-        elif major_minor_blender_Version == Version("2.79"):
+        elif major_minor_blender_Version == BlenderVersion("2.79"):
             compressed_ext = ".tar.gz"
         else:
             compressed_ext = ".dmg"
 
         def valid_release_file(filename):
-            if major_minor_blender_Version < Version("2.72"):
+            if major_minor_blender_Version < BlenderVersion("2.72"):
                 # previous to v2.72, macos release supported 32 bits
                 bits_id = "x86_64" if (bits == 64 or arch == "x86_64") else "i386"
                 if not filename.endswith(f"{bits_id}{compressed_ext}"):
                     return False
-            elif major_minor_blender_Version >= Version("2.93"):
+            elif major_minor_blender_Version >= BlenderVersion("2.93"):
                 # from v2.93, Blender supports arm64 builds for macOS
                 if arch in ["x64", "arm64"]:
                     if not filename.endswith(f"{arch}{compressed_ext}"):
@@ -484,9 +530,11 @@ def get_legacy_release_download_url(
     major_minor_blender_version = re.sub(
         r"[a-zA-Z]", "", ".".join(blender_version.split(".")[:2])
     )
-    major_minor_blender_Version = Version(major_minor_blender_version)
+    major_minor_blender_Version = BlenderVersion(major_minor_blender_version)
 
-    if Version(major_minor_blender_version) < Version(MINIMUM_VERSION_SUPPPORTED):
+    if BlenderVersion(major_minor_blender_version) < BlenderVersion(
+        MINIMUM_VERSION_SUPPPORTED
+    ):
         sys.stderr.write(
             "The minimum version supported by blender-downloader is"
             f" {MINIMUM_VERSION_SUPPPORTED}.\n"
@@ -926,13 +974,13 @@ def list_available_blender_versions(
     if maximum_versions < 3:
         sys.stdout.write(f"{stable_version}\n")
         return 0
-    stable_Version = Version(stable_version)
+    stable_Version = BlenderVersion(stable_version)
     _stable_version_printed = False
 
     url = "https://download.blender.org/release/"
     response_lines = GET(url, use_cache=use_cache).splitlines()
     version_matcher = re.compile(r"^\d+\.\d+$")
-    min_blender_Version_supported = Version(MINIMUM_VERSION_SUPPPORTED)
+    min_blender_Version_supported = BlenderVersion(MINIMUM_VERSION_SUPPPORTED)
 
     for line in reversed(response_lines):
         quote_split = line.split('"')
@@ -947,7 +995,7 @@ def list_available_blender_versions(
         if not re.match(version_matcher, blender_version):
             continue
 
-        major_minor_blender_Version = Version(blender_version)
+        major_minor_blender_Version = BlenderVersion(blender_version)
         if major_minor_blender_Version < min_blender_Version_supported:
             continue
 
@@ -970,6 +1018,8 @@ def list_available_blender_versions(
             major_minor_blender_release_url,
             use_cache=use_cache,
         ).splitlines()
+
+        repo_versions = []
         for repo_line in reversed(repo_response):
             if not repo_line.startswith(f'<a href="blender-{blender_version}'):
                 continue
@@ -981,8 +1031,13 @@ def list_available_blender_versions(
             if not valid_release_file(filename):
                 continue
 
+            repo_versions.append(repo_line.split("-")[1])
+
+        # sort versions in reversed order
+        repo_versions.sort(key=lambda v: BlenderVersion(v), reverse=True)
+
+        for version in repo_versions:
             # found version
-            version = repo_line.split("-")[1]
             if version.count(".") > 2:
                 version = ".".join(version.split(".")[:3])
             if version in versions_found:
@@ -990,7 +1045,7 @@ def list_available_blender_versions(
 
             # print version
             #   print stable version in their correct place
-            if Version(version) < stable_Version and not _stable_version_printed:
+            if BlenderVersion(version) < stable_Version and not _stable_version_printed:
                 n_versions += 1
                 sys.stdout.write(f"{stable_version}\n")
                 _stable_version_printed = True

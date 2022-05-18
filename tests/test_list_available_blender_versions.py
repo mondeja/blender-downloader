@@ -9,36 +9,9 @@ import pytest
 
 from blender_downloader import (
     MINIMUM_VERSION_SUPPPORTED,
+    BlenderVersion,
     list_available_blender_versions,
 )
-
-
-class BlenderVersion:
-    """Lazy comparison of Blender versions."""
-
-    def __init__(self, raw):
-        self.raw = raw
-
-        self.version_info = []
-        for i, partial in enumerate(raw.split(".")):
-            if i > 1:
-                for ch in partial:
-                    if ch.isalpha():
-                        break
-                    self.version_info.append(int(ch))
-            else:
-                num = ""
-                for ch in partial:
-                    if ch.isalpha():
-                        break
-                    num += ch
-                self.version_info.append(int(num))
-
-    def __lt__(self, other):
-        return other.version_info >= self.version_info
-
-    def __repr__(self):
-        return self.raw
 
 
 @pytest.mark.parametrize("maximum_versions", (1, 2, random.randint(5, 10), math.inf))
@@ -63,8 +36,8 @@ def test_list_available_blender_versions(
 
     for raw_version in stdout_lines:
         version = BlenderVersion(raw_version)
-        assert min_version_supported < version
+        assert min_version_supported <= version
 
         if prev_version is not None:
-            assert version < prev_version
+            assert prev_version > version
         prev_version = version
