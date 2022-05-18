@@ -791,7 +791,7 @@ def extract_release(zipped_filepath, quiet=False):
             )
             for file in tqdm(**progress_bar_kwargs):
                 f.extract(member=file, path=output_directory)
-    else:  # extension == ".dmg":
+    elif extension == ".dmg":
         running_os = get_running_os()
         if running_os != "macos":
             sys.stderr.write(
@@ -823,6 +823,18 @@ def extract_release(zipped_filepath, quiet=False):
                 contents_parent_dirpath,
                 extracted_directory_filepath,
             )
+    else:
+        if "-e" in sys.argv and "--extract" not in sys.argv:
+            extract_option = "-e"
+        elif "-e" not in sys.argv and "--extract" in sys.argv:
+            extract_option = "--extract"
+        else:
+            extract_option = "-e/--extract"
+        sys.stderr.write(
+            f"File extension '{extension}' extraction not supported by"
+            f" '{extract_option}'\n"
+        )
+        sys.exit(1)
 
     return extracted_directory_filepath
 
