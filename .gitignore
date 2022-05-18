@@ -10,3 +10,5 @@ blender-*
 *.img
 Blender
 .vscode
+.coverage
+htmlcov

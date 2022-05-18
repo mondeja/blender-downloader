@@ -3,99 +3,100 @@
 import contextlib
 import io
 import os
-import shutil
 import tarfile
-import tempfile
 import uuid
 import zipfile
 
 import pytest
+from testing_utils import SUPPORTED_EXTENSIONS_FOR_EXTRACTION
 
-from blender_downloader import (
-    SUPPORTED_FILETYPES_EXTRACTION,
-    extract_release,
-    get_running_os,
-)
+from blender_downloader import extract_release
 
 
-# NOTE: MacOS '.dmg' not tested
-EXTENSIONS = [".zip", ".tar.bz2", ".tar.gz", ".tar.xz", ".fakeextension"]
+# TODO: test when 'root_dirnames == 1'
+# TODO: test when 'root_dirnames > 1'
+
+# TODO: MacOS '.dmg' not tested
 
 
-def create_zipped_file_by_extension(extension):
+def create_zipped_file_by_extension(tmp_path, extension, files):
     fake_release_zipped_filepath = os.path.join(
-        tempfile.gettempdir(),
+        tmp_path,
         f"{uuid.uuid4().hex}{extension}",
     )
 
-    _f = tempfile.NamedTemporaryFile("w", delete=False)
-    _f.write("foo\n")
-    f = open(_f.name)
-    _f.close()
+    def files_generator():
+        for fname in files:
+            with open(os.path.join(tmp_path, f"{fname}.txt"), "w") as f:
+                f.write(f"{fname}\n")
+                filepath = f.name
+            yield filepath
 
     if extension == ".zip":
         with zipfile.ZipFile(fake_release_zipped_filepath, "w") as zipf:
-            zipf.write(f.name)
+            for filepath in files_generator():
+                zipf.write(filepath, os.path.relpath(filepath, tmp_path))
     elif extension in [".tar.bz2", ".tar.gz", ".tar.xz"]:
         format = extension.split(".")[2]
         with tarfile.open(fake_release_zipped_filepath, f"w:{format}") as zipf:
-            zipf.add(f.name)
-    return (fake_release_zipped_filepath, f)
+            for filepath in files_generator():
+                zipf.add(filepath, os.path.relpath(filepath, tmp_path))
+    else:
+        raise NotImplementedError(
+            f"Tests for extraction of files with '{extension}' are not implemented"
+        )
+    return fake_release_zipped_filepath
 
 
-@pytest.mark.skipif(
-    get_running_os() == "macos",
-    reason="MacOS extraction not covered by 'test_extract_release' test.",
+@pytest.mark.parametrize(
+    "expected_files",
+    (["foo"], ["foo", "bar"]),
+    ids=('["foo.txt"]', '["foo.txt","bar.txt"]'),
 )
-@pytest.mark.parametrize("extension", EXTENSIONS)
+@pytest.mark.parametrize(
+    "extension", SUPPORTED_EXTENSIONS_FOR_EXTRACTION[4:] + [".fakeextension"]
+)
 @pytest.mark.parametrize("quiet", (True, False))
-def test_extract_release(extension, quiet):
-    if quiet is True:
-        return
-    mocked_stderr = io.StringIO()
-    if ("." + extension.split(".")[-1]) not in SUPPORTED_FILETYPES_EXTRACTION:
+def test_extract_release(expected_files, extension, quiet, tmp_path):
+    stderr = io.StringIO()
+    if extension not in SUPPORTED_EXTENSIONS_FOR_EXTRACTION:
         with pytest.raises(SystemExit):
-            with contextlib.redirect_stderr(mocked_stderr):
+            with contextlib.redirect_stderr(stderr):
                 extract_release(f"foo{extension}", quiet=quiet)
-        assert mocked_stderr.getvalue() == (
-            f"Blender compressed release file 'foo{extension}' extraction is"
-            " not supported by blender-downloader.\n"
+        assert stderr.getvalue() == (
+            f"File extension '{extension}' extraction not supported by"
+            " '-e/--extract' command line option.\n"
         )
         return
 
-    fake_release_zipped_filepath, content_f = create_zipped_file_by_extension(
+    fake_release_zipped_filepath = create_zipped_file_by_extension(
+        tmp_path,
         extension,
+        expected_files,
     )
 
-    attempt = 0
-    while attempt < 2:
-        with contextlib.redirect_stderr(mocked_stderr):
-            directory_filepath = extract_release(
-                fake_release_zipped_filepath,
-                quiet=quiet,
-            )
-
-        assert os.path.isdir(directory_filepath)
-        files = os.listdir(directory_filepath)
-        if len(files) > 1:
-            shutil.rmtree(directory_filepath)
-            attempt += 1
-        else:
-            break
-    assert len(files) == 1
-    with open(os.path.join(directory_filepath, files[0])) as f:
-        assert f.read() == content_f.read()
-
-    if quiet is False:
-        stderr_lines = mocked_stderr.getvalue().splitlines()
-        fake_release_zipped_filename = os.path.basename(fake_release_zipped_filepath)
-        assert stderr_lines[0] == f"Decompressing '{fake_release_zipped_filename}'..."
-        assert stderr_lines[2].startswith(
-            f"Extracting '{fake_release_zipped_filename}': ",
+    with contextlib.redirect_stderr(stderr):
+        directory_filepath = extract_release(
+            fake_release_zipped_filepath,
+            quiet=quiet,
         )
+    assert directory_filepath == os.path.join(tmp_path, "Blender")
 
-    # cleanup
-    os.remove(fake_release_zipped_filepath)
-    content_f.close()
-    os.remove(content_f.name)
-    shutil.rmtree(directory_filepath)
+    output_filenames = os.listdir(directory_filepath)
+    assert len(output_filenames) == len(expected_files)
+
+    expected_filenames = [f"{f}.txt" for f in expected_files]
+
+    for filename in output_filenames:
+        assert filename in expected_filenames
+
+        filepath = os.path.join(directory_filepath, filename)
+        with open(filepath) as f:
+            content = f.read()
+
+        expected_content = filename.replace(".txt", "") + "\n"
+        assert content == expected_content
+    if quiet is False:
+        stderr_lines = stderr.getvalue().splitlines()
+        assert stderr_lines[0].startswith("Decompressing")
+        assert stderr_lines[2].startswith("Extracting")
