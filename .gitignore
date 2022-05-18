@@ -6,3 +6,7 @@ blender-*
 /.pytest_cache
 /*.egg-info
 /dist
+*.dmg
+*.img
+Blender
+.vscode

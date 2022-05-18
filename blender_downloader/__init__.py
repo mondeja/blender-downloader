@@ -10,6 +10,7 @@ import re
 import shutil
 import sys
 import tarfile
+import tempfile
 import zipfile
 from urllib.request import Request, urlopen, urlsplit
 
@@ -25,6 +26,7 @@ __version__ = "0.0.21"
 
 QUIET = False
 
+TEMPDIR = os.path.join(tempfile.gettempdir(), "blender-downloader")
 SCRIPT_NEW_ISSUE_URL = f"https://github.com/{__author__}/{__title__}/issues/new"
 BLENDER_MANUAL_VERSIONS_URL = "https://docs.blender.org/PROD/versions.json"
 BLENDER_DAILY_BUILDS_URL = "https://builder.blender.org/download/daily/"
@@ -681,6 +683,12 @@ def download_release(download_url, output_directory, quiet=False):
         )
         sys.exit(1)
 
+    # create temporal blender-downloader directory if not exists to store
+    # extracted files
+    if not os.path.isdir(TEMPDIR):
+        os.mkdir(TEMPDIR)
+    tmp_output_filepath = os.path.join(TEMPDIR, output_filename)
+
     chunksize = 8192
     downloaded_size = chunksize
     res = urlopen(Request(download_url))
@@ -694,19 +702,24 @@ def download_release(download_url, output_directory, quiet=False):
         unit_divisor=1000,
         miniters=1,
         disable=quiet,
+        initial=chunksize,  # first chunk is written before entering while
     )
-    with tqdm(**progress_bar_kwargs) as progress_bar:
+    with tqdm(**progress_bar_kwargs) as progress_bar, open(
+        tmp_output_filepath, "wb"
+    ) as f:
         data = res.read(chunksize)
-        with open(output_filepath, "wb") as f:
+        f.write(data)
+        while data:
+            data = res.read(chunksize)
             f.write(data)
             progress_bar.update(chunksize)
-            while data:
-                data = res.read(chunksize)
-                f.write(data)
-                progress_bar.update(chunksize)
-                downloaded_size += chunksize
-                if downloaded_size >= total_size_bits:
-                    break
+            downloaded_size += chunksize
+            if downloaded_size >= total_size_bits:
+                break
+
+    # move from temporal directory to the real output path
+    os.rename(tmp_output_filepath, output_filepath)
+
     return output_filepath
 
 
