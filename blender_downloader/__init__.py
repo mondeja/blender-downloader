@@ -772,7 +772,7 @@ def extract_release(zipped_filepath, quiet=False):
             )
             for file in tqdm(**progress_bar_kwargs):
                 f.extract(member=file, path=output_directory)
-    elif extension in [".bz2", ".gz", ".xz"]:
+    elif extension in [".bz2", ".gz", ".tar.gz", ".xz"]:
         if not quiet:
             sys.stderr.write(f"Decompressing '{zipped_filename}'...\n")
 
