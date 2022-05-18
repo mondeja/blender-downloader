@@ -1207,7 +1207,7 @@ def run(args=[]):
     return 0
 
 
-def main():
+def main():  # pragma: no cover
     sys.exit(run(args=sys.argv[1:]))
 
 
