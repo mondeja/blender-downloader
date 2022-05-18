@@ -21,7 +21,7 @@ from tqdm import tqdm
 __author__ = "mondeja"
 __description__ = "Multiplatform Blender portable release downloader script."
 __title__ = "blender-downloader"
-__version__ = "0.0.20"
+__version__ = "0.0.21"
 
 QUIET = False
 
