@@ -24,20 +24,25 @@ def test_list_available_blender_versions(
     bits,
     arch,
 ):
-    mocked_stdout = io.StringIO()
-    with contextlib.redirect_stdout(mocked_stdout):
+    stdout = io.StringIO()
+    with contextlib.redirect_stdout(stdout):
         list_available_blender_versions(maximum_versions, operative_system, bits, arch)
 
-    prev_version, stdout_lines = (None, mocked_stdout.getvalue().splitlines())
+    stdout_lines = stdout.getvalue().splitlines()
     if maximum_versions != math.inf:
         assert len(stdout_lines) == maximum_versions
 
+    # latest is the minimum version supported
     min_version_supported = BlenderVersion(MINIMUM_VERSION_SUPPPORTED)
+    if maximum_versions == math.inf:
+        assert BlenderVersion(stdout_lines[-1]) == min_version_supported
 
-    for raw_version in stdout_lines:
-        version = BlenderVersion(raw_version)
-        assert min_version_supported <= version
+    if maximum_versions > 1:
+        prev_version = None
+        for raw_version in stdout_lines[:-1]:
+            version = BlenderVersion(raw_version)
+            assert min_version_supported < version
 
-        if prev_version is not None:
-            assert prev_version > version
-        prev_version = version
+            if prev_version is not None:
+                assert prev_version > version
+            prev_version = version
