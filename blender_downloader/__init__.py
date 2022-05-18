@@ -31,7 +31,7 @@ SCRIPT_NEW_ISSUE_URL = f"https://github.com/{__author__}/{__title__}/issues/new"
 BLENDER_MANUAL_VERSIONS_URL = "https://docs.blender.org/PROD/versions.json"
 BLENDER_DAILY_BUILDS_URL = "https://builder.blender.org/download/daily/"
 MINIMUM_VERSION_SUPPPORTED = "2.57"
-SUPPORTED_FILETYPES_EXTRACTION = [".bz2", ".gz", ".xz", ".zip", ".dmg"]
+SUPPORTED_FILETYPES_EXTRACTION = [".bz2", ".gz", ".tar.gz", ".xz", ".zip", ".dmg"]
 NIGHLY_RELEASES_CACHE_EXPIRATION = 60 * 60 * 24  # 1 day
 CACHE = Cache(
     user_data_dir(appname=__title__, appauthor=__author__, version=__version__)
@@ -102,6 +102,23 @@ def GET(url, expire=259200, use_cache=True):  # 3 days for expiration
         if use_cache:
             CACHE.set(url, response, expire=expire)
     return response.decode("utf-8")
+
+
+def get_toplevel_dirnames_from_paths(paths):
+    """Extracts the names of the directories in the top level
+    from a set of paths constituting multiple directory trees.
+    """
+    toplevel_dirnames = []
+    for path in paths:
+        # not optimal implementation, but crossplatform for sure
+        parent, _ = os.path.split(path)
+        is_file = parent == ""
+        if not is_file:
+            while parent:
+                previous_parent = parent
+                parent, _ = os.path.split(previous_parent)
+            toplevel_dirnames.append(previous_parent)
+    return toplevel_dirnames
 
 
 def build_parser():
@@ -742,13 +759,6 @@ def extract_release(zipped_filepath, quiet=False):
     output_directory = os.path.abspath(os.path.dirname(zipped_filepath))
     extension = os.path.splitext(zipped_filepath)[1]
 
-    if extension not in SUPPORTED_FILETYPES_EXTRACTION:
-        sys.stderr.write(
-            f"Blender compressed release file '{zipped_filename}' extraction"
-            " is not supported by blender-downloader.\n"
-        )
-        sys.exit(1)
-
     # filepath of the extracted directory, don't confuse it with
     # `output_directory`, that is the directory where the file to extract
     # is located
@@ -760,10 +770,31 @@ def extract_release(zipped_filepath, quiet=False):
 
         with zipfile.ZipFile(zipped_filepath, "r") as f:
             namelist = f.namelist()
-            extracted_directory_filepath = os.path.join(
-                output_directory,
-                namelist[0].split(os.sep)[0],
-            )
+
+            # ensure that Blender is extracted in a top level directory
+            #
+            # MacOS versions previous to 2.79 are released in a ZIP file
+            # with multiple directories and files in the root, which results
+            # in a messy extraction with a lot of files in the current
+            # working directory
+            root_dirnames = get_toplevel_dirnames_from_paths(namelist)
+
+            if len(root_dirnames) > 1:
+                output_directory = os.path.join(output_directory, "Blender")
+            else:
+                output_directory = os.path.join(output_directory, root_dirnames[0])
+
+            # don't overwrite existing non empty directory extracting
+            if os.path.isdir(output_directory) and os.listdir(output_directory):
+                sys.stderr.write(
+                    f"The directory '{output_directory}' where the files will"
+                    " be extracted already exists and is not empty. Extraction"
+                    " skipped.\n"
+                )
+                sys.exit(1)
+
+            extracted_directory_filepath = output_directory
+
             progress_bar_kwargs = dict(
                 total=len(namelist),
                 desc=f"Extracting '{zipped_filename}'",
@@ -772,25 +803,33 @@ def extract_release(zipped_filepath, quiet=False):
             )
             for file in tqdm(**progress_bar_kwargs):
                 f.extract(member=file, path=output_directory)
+
     elif extension in [".bz2", ".gz", ".tar.gz", ".xz"]:
         if not quiet:
             sys.stderr.write(f"Decompressing '{zipped_filename}'...\n")
 
         with tarfile.open(zipped_filepath, "r") as f:
-            members = f.getmembers()
+            files = f.getmembers()
+            paths = [file.name for file in files]
 
-            extracted_directory_filepath = os.path.join(
-                output_directory,
-                members[0].name.split(os.sep)[0],
-            )
+            root_dirnames = get_toplevel_dirnames_from_paths(paths)
+
+            if len(root_dirnames) > 1:
+                output_directory = os.path.join(output_directory, "Blender")
+            else:
+                output_directory = os.path.join(output_directory, root_dirnames[0])
+
+            extracted_directory_filepath = output_directory
+
             progress_bar_kwargs = dict(
-                total=len(members),
+                total=len(files),
                 desc=f"Extracting '{zipped_filename}'",
-                iterable=members,
+                iterable=files,
                 disable=quiet,
             )
             for file in tqdm(**progress_bar_kwargs):
                 f.extract(member=file, path=output_directory)
+
     elif extension == ".dmg":
         running_os = get_running_os()
         if running_os != "macos":
