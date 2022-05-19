@@ -194,6 +194,7 @@ def build_parser():
         " This is not supported for MacOS releases using Python3.6.",
     )
     parser.add_argument(
+        "-r",
         "--remove-compressed",
         dest="remove_compressed",
         action="store_true",
@@ -201,6 +202,7 @@ def build_parser():
         " takes effect if '--extract' option is passed.",
     )
     parser.add_argument(
+        "-b",
         "--print-blender-executable",
         dest="print_blender_executable",
         action="store_true",
@@ -209,6 +211,7 @@ def build_parser():
         " along with '--extract' or won't take effect.",
     )
     parser.add_argument(
+        "-p",
         "--print-python-executable",
         dest="print_python_executable",
         action="store_true",
@@ -218,6 +221,7 @@ def build_parser():
         " take effect.",
     )
     parser.add_argument(
+        "-o",
         "--os",
         "--operative-system",
         dest="operative_system",
@@ -236,6 +240,7 @@ def build_parser():
         " latest release with support operative systems with 32 bits.",
     )
     parser.add_argument(
+        "-a",
         "--arch",
         dest="arch",
         default=None,  # depending on availability between versions
@@ -256,6 +261,7 @@ def build_parser():
         " versions. You can pass an optional maximum number of versions to list.",
     )
     parser.add_argument(
+        "-n",
         "--no-cache",
         "--nocache",
         dest="use_cache",
@@ -263,6 +269,7 @@ def build_parser():
         help="Don't use cache requesting Blender repositories.",
     )
     parser.add_argument(
+        "-c",
         "--invalidate-cache",
         "--clear-cache",
         dest="clear_cache",
