@@ -44,6 +44,15 @@ def removesuffix(string, suffix):  # polyfill for Python < 3.9
     return string
 
 
+def controlled_full_splitext(path, possible_extensions):
+    extension = None
+    for ext in possible_extensions:
+        if path.endswith(ext):
+            extension = ext
+            break
+    return extension
+
+
 class BlenderVersion:
     """Blender versions object for easy comparations support."""
 
@@ -118,12 +127,12 @@ def get_toplevel_dirnames_from_paths(paths):
     for path in paths:
         # not optimal implementation, but crossplatform for sure
         parent, _ = os.path.split(path)
-        is_file = parent == ""
-        if not is_file:
+        if parent:  # is not file, when is file parent == ''
             while parent:
                 previous_parent = parent
                 parent, _ = os.path.split(previous_parent)
-            toplevel_dirnames.append(previous_parent)
+            if previous_parent not in toplevel_dirnames:
+                toplevel_dirnames.append(previous_parent)
     return toplevel_dirnames
 
 
@@ -784,19 +793,20 @@ def extract_release(zipped_filepath, quiet=False):
     try:
         zipped_filename = os.path.basename(zipped_filepath)
         output_directory = os.path.abspath(os.path.dirname(zipped_filepath))
-        extension = os.path.splitext(zipped_filepath)[1]
+        short_extension = os.path.splitext(zipped_filepath)[-1]
 
         # filepath of the extracted directory, don't confuse it with
         # `output_directory`, that is the directory where the file to extract
         # is located
         extracted_directory_path = None
 
-        if extension == ".zip":
+        if short_extension == ".zip":
             if not quiet:
                 sys.stderr.write(f"Decompressing '{zipped_filename}'...\n")
 
             with zipfile.ZipFile(zipped_filepath, "r") as f:
                 namelist = f.namelist()
+                namelist_length = len(namelist)
 
                 # ensure that Blender is extracted in a top level directory
                 #
@@ -809,22 +819,24 @@ def extract_release(zipped_filepath, quiet=False):
                 # `not root_dirnames` when only files are found in the ZIP
                 if len(root_dirnames) > 1 or not root_dirnames:
                     output_directory = os.path.join(output_directory, "Blender")
+
+                    # don't overwrite existing non empty directory extracting
+                    if os.path.isdir(output_directory) and os.listdir(output_directory):
+                        sys.stderr.write(
+                            f"The directory '{output_directory}' where the files will"
+                            " be extracted already exists and is not empty. Extraction"
+                            " skipped.\n"
+                        )
+                        sys.exit(1)
+
+                    extracted_directory_path = output_directory
                 else:
-                    output_directory = os.path.join(output_directory, root_dirnames[0])
-
-                # don't overwrite existing non empty directory extracting
-                if os.path.isdir(output_directory) and os.listdir(output_directory):
-                    sys.stderr.write(
-                        f"The directory '{output_directory}' where the files will"
-                        " be extracted already exists and is not empty. Extraction"
-                        " skipped.\n"
+                    extracted_directory_path = os.path.join(
+                        output_directory, removesuffix(zipped_filename, ".zip")
                     )
-                    sys.exit(1)
-
-                extracted_directory_path = output_directory
 
                 progress_bar_kwargs = dict(
-                    total=len(namelist),
+                    total=namelist_length,
                     desc=f"Extracting '{zipped_filename}'",
                     iterable=namelist,
                     disable=quiet,
@@ -832,25 +844,31 @@ def extract_release(zipped_filepath, quiet=False):
                 for file in tqdm(**progress_bar_kwargs):
                     f.extract(member=file, path=output_directory)
 
-        elif extension in [".bz2", ".gz", ".xz", ".tar.gz", ".tar.bz2", ".tar.xz"]:
+        elif short_extension in [".bz2", ".gz", ".xz"]:
             if not quiet:
                 sys.stderr.write(f"Decompressing '{zipped_filename}'...\n")
 
             with tarfile.open(zipped_filepath, "r") as f:
                 files = f.getmembers()
+                files_length = len(files)
                 paths = [file.name for file in files]
 
                 root_dirnames = get_toplevel_dirnames_from_paths(paths)
 
                 if len(root_dirnames) > 1 or not root_dirnames:
                     output_directory = os.path.join(output_directory, "Blender")
+                    extracted_directory_path = output_directory
                 else:
-                    output_directory = os.path.join(output_directory, root_dirnames[0])
-
-                extracted_directory_path = output_directory
+                    long_extension = controlled_full_splitext(
+                        zipped_filename,
+                        [".tar.gz", ".tar.xz", ".tar.bz2", ".gz", ".xz", ".bz2"],
+                    )
+                    extracted_directory_path = os.path.join(
+                        output_directory, removesuffix(zipped_filename, long_extension)
+                    )
 
                 progress_bar_kwargs = dict(
-                    total=len(files),
+                    total=files_length,
                     desc=f"Extracting '{zipped_filename}'",
                     iterable=files,
                     disable=quiet,
@@ -858,7 +876,7 @@ def extract_release(zipped_filepath, quiet=False):
                 for file in tqdm(**progress_bar_kwargs):
                     f.extract(member=file, path=output_directory)
 
-        elif extension == ".dmg":
+        elif short_extension == ".dmg":
             running_os = get_running_os()
             if running_os != "macos":
                 # we are not in MacOS, so we need the binaries dmg2img and 7z
@@ -937,8 +955,9 @@ def extract_release(zipped_filepath, quiet=False):
             else:
                 extract_option = "-e/--extract"
             sys.stderr.write(
-                f"File extension '{extension}' extraction not supported by"
-                f" '{extract_option}' command line option.\n"
+                f"File extension '{short_extension}' extraction not"
+                " supported by blender-downloader's command line option"
+                f" '{extract_option}'.\n"
             )
             sys.exit(1)
     except KeyboardInterrupt:
