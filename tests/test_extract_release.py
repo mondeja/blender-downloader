@@ -65,7 +65,7 @@ def test_extract_release(expected_files, extension, quiet, tmp_path):
                 extract_release(f"foo{extension}", quiet=quiet)
         assert stderr.getvalue() == (
             f"File extension '{extension}' extraction not supported by"
-            " '-e/--extract' command line option.\n"
+            " blender-downloader's command line option '-e/--extract'.\n"
         )
         return
 
