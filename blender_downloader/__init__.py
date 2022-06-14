@@ -23,7 +23,7 @@ from tqdm import tqdm
 __author__ = "mondeja"
 __description__ = "Multiplatform Blender portable release downloader script."
 __title__ = "blender-downloader"
-__version__ = "0.0.22"
+__version__ = "0.0.23"
 
 QUIET = False
 
@@ -777,7 +777,11 @@ def download_release(download_url, output_directory, quiet=False):
         sys.exit(1)
 
     # move from temporal directory to the real output path
-    os.rename(tmp_output_filepath, output_filepath)
+    #
+    # use `shutil.move` instead of `os.rename` to be able to
+    # move files between different hard drives, see:
+    # https://stackoverflow.com/a/21116654/9167585
+    shutil.move(tmp_output_filepath, output_filepath)
 
     return output_filepath
 
