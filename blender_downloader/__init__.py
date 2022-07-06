@@ -786,15 +786,17 @@ def download_release(download_url, output_directory, quiet=False):
 
     return output_filepath
 
+
 def _verify_disk_space(output_dir, total_size):
     free_space = shutil.disk_usage(output_dir).free
     if free_space < total_size:
         sys.stderr.write(
-            f'Not enough free space at {output_dir}.\n'
-          + f'Free space: {free_space} bytes '
-          + f'Needed: {total_size} bytes'
+            f"Not enough free space at {output_dir}."
+            f"Free space: {free_space} bytes... "
+            f"Needed: {total_size} bytes."
         )
         sys.exit(1)
+
 
 def extract_release(zipped_filepath, quiet=False):
     """Extracts, if needed, a Blender release file depending on their file type.
