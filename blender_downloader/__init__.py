@@ -13,12 +13,14 @@ import sys
 import tarfile
 import tempfile
 import zipfile
+from shutil import disk_usage
 from urllib.request import Request, urlopen, urlsplit
 
 from appdirs import user_data_dir
 from diskcache import Cache, Timeout as CacheTimeout
 from tqdm import tqdm
 
+from .disk_utils import verify_disk_space 
 
 __author__ = "mondeja"
 __description__ = "Multiplatform Blender portable release downloader script."
@@ -746,10 +748,12 @@ def download_release(download_url, output_directory, quiet=False):
         chunksize = 8192
         downloaded_size = chunksize
         res = urlopen(Request(download_url))
-        total_size_bits = int(res.info()["Content-Length"])
+        total_size_bytes = int(res.info()["Content-Length"])
+
+        verify_disk_space(output_directory, total_size_bytes)
 
         progress_bar_kwargs = dict(
-            total=total_size_bits,
+            total=total_size_bytes,
             unit="B",
             desc=f"Downloading '{output_filename}'",
             unit_scale=True,
@@ -768,7 +772,7 @@ def download_release(download_url, output_directory, quiet=False):
                 f.write(data)
                 progress_bar.update(chunksize)
                 downloaded_size += chunksize
-                if downloaded_size >= total_size_bits:
+                if downloaded_size >= total_size_bytes:
                     break
     except KeyboardInterrupt:
         sys.stderr.write("Download interrupted\n")
