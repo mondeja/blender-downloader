@@ -19,6 +19,7 @@ from appdirs import user_data_dir
 from diskcache import Cache, Timeout as CacheTimeout
 from tqdm import tqdm
 
+
 __author__ = "mondeja"
 __description__ = "Multiplatform Blender portable release downloader script."
 __title__ = "blender-downloader"
