@@ -19,8 +19,6 @@ from appdirs import user_data_dir
 from diskcache import Cache, Timeout as CacheTimeout
 from tqdm import tqdm
 
-from blender_downloader.disk_utils import verify_disk_space 
-
 __author__ = "mondeja"
 __description__ = "Multiplatform Blender portable release downloader script."
 __title__ = "blender-downloader"
@@ -749,7 +747,7 @@ def download_release(download_url, output_directory, quiet=False):
         res = urlopen(Request(download_url))
         total_size_bytes = int(res.info()["Content-Length"])
 
-        verify_disk_space(output_directory, total_size_bytes)
+        _verify_disk_space(output_directory, total_size_bytes)
 
         progress_bar_kwargs = dict(
             total=total_size_bytes,
@@ -788,6 +786,15 @@ def download_release(download_url, output_directory, quiet=False):
 
     return output_filepath
 
+def _verify_disk_space(output_dir, total_size):
+    free_space = shutil.disk_usage(output_dir).free
+    if free_space < total_size:
+        sys.stderr.write(
+            f'Not enough free space at {output_dir}.\n'
+          + f'Free space: {free_space} bytes '
+          + f'Needed: {total_size} bytes'
+        )
+        sys.exit(1)
 
 def extract_release(zipped_filepath, quiet=False):
     """Extracts, if needed, a Blender release file depending on their file type.
