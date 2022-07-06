@@ -16,4 +16,4 @@ def test_check_has_enough_negative_space_raises_exception():
 
 def test_get_free_space_handles_invalid_paths():
    with pytest.raises(FileNotFoundError):
-      _get_free_space_at("AEHO/invalid_path")
+      _get_free_space_at(".23r-2kf0-3k32-g0\\/invalid_path")
