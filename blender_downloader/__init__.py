@@ -13,7 +13,6 @@ import sys
 import tarfile
 import tempfile
 import zipfile
-from shutil import disk_usage
 from urllib.request import Request, urlopen, urlsplit
 
 from appdirs import user_data_dir
