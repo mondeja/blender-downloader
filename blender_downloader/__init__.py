@@ -746,10 +746,12 @@ def download_release(download_url, output_directory, quiet=False):
         chunksize = 8192
         downloaded_size = chunksize
         res = urlopen(Request(download_url))
-        total_size_bits = int(res.info()["Content-Length"])
+        total_size_bytes = int(res.info()["Content-Length"])
+
+        _verify_disk_space(output_directory, total_size_bytes)
 
         progress_bar_kwargs = dict(
-            total=total_size_bits,
+            total=total_size_bytes,
             unit="B",
             desc=f"Downloading '{output_filename}'",
             unit_scale=True,
@@ -768,7 +770,7 @@ def download_release(download_url, output_directory, quiet=False):
                 f.write(data)
                 progress_bar.update(chunksize)
                 downloaded_size += chunksize
-                if downloaded_size >= total_size_bits:
+                if downloaded_size >= total_size_bytes:
                     break
     except KeyboardInterrupt:
         sys.stderr.write("Download interrupted\n")
@@ -784,6 +786,17 @@ def download_release(download_url, output_directory, quiet=False):
     shutil.move(tmp_output_filepath, output_filepath)
 
     return output_filepath
+
+
+def _verify_disk_space(output_dir, total_size):
+    free_space = shutil.disk_usage(output_dir).free
+    if free_space < total_size:
+        sys.stderr.write(
+            f"Not enough free space at {output_dir}."
+            f" Free space: {free_space} bytes."
+            f" Needed: {total_size} bytes."
+        )
+        sys.exit(1)
 
 
 def extract_release(zipped_filepath, quiet=False):
