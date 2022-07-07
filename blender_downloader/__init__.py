@@ -793,8 +793,8 @@ def _verify_disk_space(output_dir, total_size):
     if free_space < total_size:
         sys.stderr.write(
             f"Not enough free space at {output_dir}."
-            f"Free space: {free_space} bytes... "
-            f"Needed: {total_size} bytes."
+            f" Free space: {free_space} bytes."
+            f" Needed: {total_size} bytes."
         )
         sys.exit(1)
 
