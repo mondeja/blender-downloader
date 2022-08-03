@@ -1226,14 +1226,12 @@ def list_available_blender_versions(
             # print version
             #   print stable version in their correct place
             if BlenderVersion(version) < stable_Version and not _stable_version_printed:
-                n_versions += 1
                 sys.stdout.write(f"{stable_version} (stable)\n")
                 _stable_version_printed = True
-                if n_versions >= maximum_versions:
-                    break
+            else:
+                sys.stdout.write(f"{version}\n")
 
             versions_found.append(version)
-            sys.stdout.write(f"{version}\n")
             n_versions += 1
 
             if n_versions >= maximum_versions:
