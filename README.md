@@ -49,7 +49,7 @@ blender-downloader --list
 [pypi-pyversions-badge-link]: https://img.shields.io/pypi/pyversions/blender-downloader
 [license-image]: https://img.shields.io/pypi/l/blender-downloader?color=light-green
 [license-link]: https://github.com/mondeja/blender-downloader/blob/master/LICENSE
-[tests-image]: https://img.shields.io/github/workflow/status/mondeja/blender-downloader/CI
+[tests-image]: https://img.shields.io/github/actions/workflow/status/mondeja/blender-downloader/ci.yml?branch=master
 [tests-link]: https://github.com/mondeja/blender-downloader/actions?query=workflow%3ACI
 [coverage-image]: https://img.shields.io/coveralls/github/mondeja/blender-downloader?logo=coveralls
 [coverage-link]: https://coveralls.io/github/mondeja/blender-downloader
