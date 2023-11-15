@@ -46,7 +46,7 @@ blender-downloader --list
 
 [pypi-link]: https://pypi.org/project/blender-downloader
 [pypi-version-badge-link]: https://img.shields.io/pypi/v/blender-downloader?logo=pypi&logoColor=white
-[pypi-pyversions-badge-link]: https://img.shields.io/pypi/pyversions/blender-downloader
+[pypi-pyversions-badge-link]: https://img.shields.io/pypi/pyversions/blender-downloader?logo=python&logoColor=white
 [license-image]: https://img.shields.io/pypi/l/blender-downloader?color=light-green&logo=freebsd&logoColor=white
 [license-link]: https://github.com/mondeja/blender-downloader/blob/master/LICENSE
 [tests-image]: https://img.shields.io/github/actions/workflow/status/mondeja/blender-downloader/ci.yml?logo=github&label=tests&branch=master
