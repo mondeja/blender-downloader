@@ -45,11 +45,11 @@ blender-downloader --list
 ```
 
 [pypi-link]: https://pypi.org/project/blender-downloader
-[pypi-version-badge-link]: https://img.shields.io/pypi/v/blender-downloader
+[pypi-version-badge-link]: https://img.shields.io/pypi/v/blender-downloader?logo=pypi&logoColor=white
 [pypi-pyversions-badge-link]: https://img.shields.io/pypi/pyversions/blender-downloader
-[license-image]: https://img.shields.io/pypi/l/blender-downloader?color=light-green
+[license-image]: https://img.shields.io/pypi/l/blender-downloader?color=light-green&logo=freebsd&logoColor=white
 [license-link]: https://github.com/mondeja/blender-downloader/blob/master/LICENSE
-[tests-image]: https://img.shields.io/github/actions/workflow/status/mondeja/blender-downloader/ci.yml?branch=master
+[tests-image]: https://img.shields.io/github/actions/workflow/status/mondeja/blender-downloader/ci.yml?logo=github&label=tests&branch=master
 [tests-link]: https://github.com/mondeja/blender-downloader/actions?query=workflow%3ACI
-[coverage-image]: https://img.shields.io/coveralls/github/mondeja/blender-downloader?logo=coveralls
-[coverage-link]: https://coveralls.io/github/mondeja/blender-downloader
+[coverage-image]: https://img.shields.io/codecov/c/github/mondeja/blender-downloader?logo=codecov&logoColor=white
+[coverage-link]: https://app.codecov.io/gh/mondeja/blender-downloader

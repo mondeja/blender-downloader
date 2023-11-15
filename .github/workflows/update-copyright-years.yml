@@ -1,12 +1,16 @@
-name: Update copyright years in license file
+name: Update copyright years
+
+permissions:
+  pull-requests: write
+  contents: write
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: 0 3 2 1 *
-  workflow_dispatch:
 
 jobs:
-  action-update-license-year:
+  update-license-year:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
