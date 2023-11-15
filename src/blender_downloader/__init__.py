@@ -368,7 +368,7 @@ def parse_args(args):
             ' v2.80. Please, specify a more recent version of Blender.\n',
         )
         sys.exit(1)
-    elif opts.bits not in [64, 32]:
+    elif opts.bits not in {64, 32}:
         sys.stderr.write(
             f"Invalid bits '{opts.bits}'. Must be either 32 or 64.\n")
         sys.exit(1)
@@ -423,7 +423,6 @@ def discover_version_number_by_identifier(identifier, use_cache=True):
         latest_Version = guess_stable_version_number_from_daily_builds_page(
             use_cache=use_cache,
         )
-        latest_Version = None
 
         # fallback to versions JSON in documentation
         if latest_Version is None:
@@ -557,7 +556,7 @@ def _build_download_repo_release_file_validator(
                     return False
             elif major_minor_blender_Version >= BlenderVersion('2.93'):
                 # from v2.93, Blender supports arm64 builds for macOS
-                if arch in ['x64', 'arm64']:
+                if arch in {'x64', 'arm64'}:
                     if not filename.endswith(f'{arch}{compressed_ext}'):
                         return False
                 elif not filename.endswith(f'x64{compressed_ext}'):
@@ -883,7 +882,7 @@ def extract_release(zipped_filepath, quiet=False):
                 for file in tqdm(**progress_bar_kwargs):
                     f.extract(member=file, path=output_directory)
 
-        elif short_extension in ['.bz2', '.gz', '.xz']:
+        elif short_extension in {'.bz2', '.gz', '.xz'}:
             if not quiet:
                 sys.stderr.write(f"Decompressing '{zipped_filename}'...\n")
 
@@ -1097,7 +1096,7 @@ def print_executables(
                         break
                 if blender_executable_filepath:
                     break
-            elif dirname == 'MacOS' and files[0] in ['Blender', 'blender']:
+            elif dirname == 'MacOS' and files[0] in {'Blender', 'blender'}:
                 blender_executable_filepath = os.path.join(
                     dirpath,
                     files[0],
