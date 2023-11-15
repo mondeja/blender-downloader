@@ -1,8 +1,3 @@
-ignore: |
-  venv
-  build
-  .github/workflows
-
 rules:
   braces:
     forbid: true
@@ -22,16 +17,18 @@ rules:
     max-spaces-after: 1
   indentation:
     check-multi-line-strings: true
+    ignore: .github
     indent-sequences: true
     spaces: consistent
   key-duplicates: enable
-  key-ordering:
-    ignore: |
-      .pre-commit-config.yaml
-      .github
+  key-ordering: disable
   line-length:
     allow-non-breakable-words: true
-    max: 80
+    ignore: |
+      .pre-commit-config.yaml
+      .pre-commit-hooks.yaml
+      .github
+    max: 180
   new-lines:
     type: unix
   octal-values:
@@ -39,11 +36,8 @@ rules:
     forbid-implicit-octal: true
   quoted-strings:
     extra-required:
-      # Dependabot does not parse unquoted hours as strings:
-      # https://github.com/mondeja/latex-ji18n/runs/1459035577
-      # https://github.community/t/dependabot-parser-treat-hours-as-integers/145596
       - \d\d:\d\d
-    quote-type: single
+    quote-type: double
     required: only-when-needed
   trailing-spaces: enable
   truthy: disable
