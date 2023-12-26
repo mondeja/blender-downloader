@@ -112,6 +112,13 @@ def get_running_os():
     return 'windows' if 'win' in sys.platform else 'linux'
 
 
+def get_dummy_header():
+    """Use a dummy user agent to avoid the 403 forbidden error."""
+    dummy_user_agent = ('Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) '
+                        'Gecko/20100101 Firefox/47.0')
+    return {'User-Agent': dummy_user_agent}
+
+
 def GET(
         url,
         expire=259200,  # 3 days for expiration
@@ -121,7 +128,7 @@ def GET(
     if use_cache:
         response = CACHE.get(url)
     if response is None:
-        response = urlopen(Request(url)).read()
+        response = urlopen(Request(url, headers=get_dummy_header())).read()
         if use_cache:
             CACHE.set(url, response, expire=expire)
     return response.decode('utf-8')
@@ -752,7 +759,7 @@ def download_release(download_url, output_directory, quiet=False):
 
         chunksize = 8192
         downloaded_size = chunksize
-        res = urlopen(Request(download_url))
+        res = urlopen(Request(download_url, headers=get_dummy_header()))
         total_size_bytes = int(res.info()['Content-Length'])
 
         _verify_disk_space(output_directory, total_size_bytes)
