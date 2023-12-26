@@ -643,7 +643,14 @@ def get_legacy_release_download_url(
         major_minor_blender_Version,
     )
 
-    for line in res.splitlines():
+    for raw_line in res.splitlines():
+        line = raw_line
+        if line.startswith('<img'):
+            # remove img tags
+            splitted = line.split('>')
+            if len(splitted) > 0:
+                line = '>'.join(splitted[1:]).strip()
+
         if not line.startswith(f'<a href="blender-{blender_version}-'):
             continue
 
