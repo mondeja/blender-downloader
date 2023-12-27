@@ -27,7 +27,7 @@ from tqdm import tqdm
 __author__ = 'mondeja'
 __description__ = 'Multiplatform Blender portable release downloader script.'
 __title__ = 'blender-downloader'
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 TEMPDIR = os.path.join(tempfile.gettempdir(), 'blender-downloader')
 DATA_DIR = user_data_dir(
@@ -112,11 +112,15 @@ def get_running_os():
     return 'windows' if 'win' in sys.platform else 'linux'
 
 
-def get_dummy_header():
-    """Use a dummy user agent to avoid the 403 forbidden error."""
+def get_headers():
+    """Use a dummy user agent to avoid 403 forbidden errors."""
     dummy_user_agent = ('Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) '
                         'Gecko/20100101 Firefox/47.0')
     return {'User-Agent': dummy_user_agent}
+
+
+def open_request(url):
+    return urlopen(Request(url, headers=get_headers()))
 
 
 def GET(
@@ -128,7 +132,7 @@ def GET(
     if use_cache:
         response = CACHE.get(url)
     if response is None:
-        response = urlopen(Request(url, headers=get_dummy_header())).read()
+        response = open_request(url).read()
         if use_cache:
             CACHE.set(url, response, expire=expire)
     return response.decode('utf-8')
@@ -766,7 +770,7 @@ def download_release(download_url, output_directory, quiet=False):
 
         chunksize = 8192
         downloaded_size = chunksize
-        res = urlopen(Request(download_url, headers=get_dummy_header()))
+        res = open_request(download_url)
         total_size_bytes = int(res.info()['Content-Length'])
 
         _verify_disk_space(output_directory, total_size_bytes)
@@ -780,7 +784,7 @@ def download_release(download_url, output_directory, quiet=False):
             'miniters': 1,
             'disable': quiet,
             'initial': (
-                chunksize,  # first chunk is written before entering while
+                chunksize  # first chunk is written before entering while
             ),
         }
         with tqdm(**progress_bar_kwargs) as progress_bar, open(
