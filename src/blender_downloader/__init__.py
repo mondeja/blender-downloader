@@ -27,7 +27,7 @@ from tqdm import tqdm
 __author__ = 'mondeja'
 __description__ = 'Multiplatform Blender portable release downloader script.'
 __title__ = 'blender-downloader'
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 TEMPDIR = os.path.join(tempfile.gettempdir(), 'blender-downloader')
 DATA_DIR = user_data_dir(
@@ -112,6 +112,17 @@ def get_running_os():
     return 'windows' if 'win' in sys.platform else 'linux'
 
 
+def get_headers():
+    """Use a dummy user agent to avoid 403 forbidden errors."""
+    dummy_user_agent = ('Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) '
+                        'Gecko/20100101 Firefox/47.0')
+    return {'User-Agent': dummy_user_agent}
+
+
+def open_request(url):
+    return urlopen(Request(url, headers=get_headers()))
+
+
 def GET(
         url,
         expire=259200,  # 3 days for expiration
@@ -121,7 +132,7 @@ def GET(
     if use_cache:
         response = CACHE.get(url)
     if response is None:
-        response = urlopen(Request(url)).read()
+        response = open_request(url).read()
         if use_cache:
             CACHE.set(url, response, expire=expire)
     return response.decode('utf-8')
@@ -636,7 +647,14 @@ def get_legacy_release_download_url(
         major_minor_blender_Version,
     )
 
-    for line in res.splitlines():
+    for raw_line in res.splitlines():
+        line = raw_line
+        if line.startswith('<img'):
+            # remove img tags
+            splitted = line.split('>')
+            if len(splitted) > 0:
+                line = '>'.join(splitted[1:]).strip()
+
         if not line.startswith(f'<a href="blender-{blender_version}-'):
             continue
 
@@ -752,7 +770,7 @@ def download_release(download_url, output_directory, quiet=False):
 
         chunksize = 8192
         downloaded_size = chunksize
-        res = urlopen(Request(download_url))
+        res = open_request(download_url)
         total_size_bytes = int(res.info()['Content-Length'])
 
         _verify_disk_space(output_directory, total_size_bytes)
@@ -766,7 +784,7 @@ def download_release(download_url, output_directory, quiet=False):
             'miniters': 1,
             'disable': quiet,
             'initial': (
-                chunksize,  # first chunk is written before entering while
+                chunksize  # first chunk is written before entering while
             ),
         }
         with tqdm(**progress_bar_kwargs) as progress_bar, open(
