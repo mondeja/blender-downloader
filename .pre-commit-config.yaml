@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.1.0
+    rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
         types_or:
@@ -15,7 +15,7 @@ repos:
           - prettier-plugin-toml
         minimum_pre_commit_version: 2.9.0
   - repo: https://github.com/mondeja/project-config
-    rev: v0.9.3
+    rev: v0.9.5
     hooks:
       - id: project-config
   - repo: meta
@@ -32,7 +32,7 @@ repos:
       - id: end-of-file-fixer
         name: end-of-file-fixer
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.5
+    rev: v0.3.0
     hooks:
       - id: ruff
         args:
@@ -43,11 +43,11 @@ repos:
     hooks:
       - id: autopep8
   - repo: https://github.com/adrienverge/yamllint
-    rev: v1.33.0
+    rev: v1.35.1
     hooks:
       - id: yamllint
   - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.10.0
+    rev: v0.12.1
     hooks:
       - id: markdownlint-cli2
         name: markdownlint-readme
