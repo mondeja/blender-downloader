@@ -24,11 +24,11 @@ classifiers = [
 ]
 keywords = ["blender", "downloader", "cli", "portable", "release", "installer"]
 dependencies = [
-  "appdirs",
-  "diskcache",
-  "tqdm",
-  "importlib-metadata-argparse-version",
-  'dmglib>=0.9.3;sys_platform == "darwin"'
+  "appdirs>=1,<2",
+  "diskcache>=5,<6",
+  "tqdm>=4,<5",
+  "importlib-metadata-argparse-version>=2,<3",
+  'dmglib>=0.9.3,<1;sys_platform == "darwin"'
 ]
 
 [[project.authors]]
