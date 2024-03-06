@@ -27,7 +27,7 @@ from tqdm import tqdm
 __author__ = 'mondeja'
 __description__ = 'Multiplatform Blender portable release downloader script.'
 __title__ = 'blender-downloader'
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 TEMPDIR = os.path.join(tempfile.gettempdir(), 'blender-downloader')
 DATA_DIR = user_data_dir(
@@ -178,7 +178,7 @@ def build_parser():
         '--version',
         action=ImportlibMetadataVersionAction,
         version='blender-downloader %(version)s',
-        importlib_metadata_version_from='blender-downloader',
+        version_from='blender-downloader',
         help='Show program version number and exit.',
     )
     parser.add_argument(
