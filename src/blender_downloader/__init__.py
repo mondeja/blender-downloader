@@ -918,14 +918,14 @@ def extract_release(zipped_filepath, quiet=False):
                 else:
                     long_extension = controlled_full_splitext(
                         zipped_filename,
-                        {
+                        [
                             '.tar.gz',
                             '.tar.xz',
                             '.tar.bz2',
                             '.gz',
                             '.xz',
                             '.bz2',
-                        },
+                        ],
                     )
                     extracted_directory_path = os.path.join(
                         output_directory, removesuffix(
@@ -1051,7 +1051,7 @@ def print_executables(
     Parameters
     ----------
 
-    extracted_directory_path : bool
+    extracted_directory_path : str
       Blender release directory.
 
     operative_system : str
