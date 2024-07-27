@@ -27,7 +27,7 @@ from tqdm import tqdm
 __author__ = 'mondeja'
 __description__ = 'Multiplatform Blender portable release downloader script.'
 __title__ = 'blender-downloader'
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 
 TEMPDIR = os.path.join(tempfile.gettempdir(), 'blender-downloader')
 DATA_DIR = user_data_dir(
@@ -699,7 +699,7 @@ def get_nightly_release_download_url(
       Use cache requesting Blender repositories.
     """
     res = GET(BLENDER_DAILY_BUILDS_URL, use_cache=use_cache)
-    urls = re.findall(rf'"({re.escape(BLENDER_DAILY_BUILDS_URL)}[^"]+)"', res)
+    urls = re.findall(r'"(https://[^"]+)"', res)
 
     expected_os_identifier = (
         'darwin' if operative_system == 'macos' else operative_system

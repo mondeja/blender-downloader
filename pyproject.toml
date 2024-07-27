@@ -1,6 +1,6 @@
 [project]
 name = "blender-downloader"
-version = "1.0.3"
+version = "1.0.4"
 description = "Blender portable release downloader."
 readme = "README.md"
 license = "BSD-3-Clause"
