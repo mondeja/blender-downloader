@@ -19,7 +19,7 @@ def test_get_nightly_release_download_url(operative_system, arch):
             arch,
         )
 
-    if arch == 'arm64' and operative_system != 'macos':
+    if arch == 'arm64' and operative_system == 'linux':
         with pytest.raises(BlenderVersionNotFound):
             get_url()
     else:
