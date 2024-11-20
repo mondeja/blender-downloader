@@ -27,7 +27,7 @@ from tqdm import tqdm
 __author__ = 'mondeja'
 __description__ = 'Multiplatform Blender portable release downloader script.'
 __title__ = 'blender-downloader'
-__version__ = '1.0.4'
+__version__ = '1.0.5'
 
 TEMPDIR = os.path.join(tempfile.gettempdir(), 'blender-downloader')
 DATA_DIR = user_data_dir(
