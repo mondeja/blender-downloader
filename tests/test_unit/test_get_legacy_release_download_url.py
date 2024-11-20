@@ -21,6 +21,16 @@ from testing_helpers import SUPPORTED_EXTENSIONS_FOR_EXTRACTION
 @pytest.mark.parametrize(
     'blender_version',
     (
+        '4.3.0',
+        '4.2.0',
+        '4.1.0',
+        '4.0.0',
+        '3.6.0',
+        '3.5.0',
+        '3.4.0',
+        '3.3.0',
+        '3.2.0',
+        '3.1.0',
         '3.0.0',
         '2.93.1',
         '2.93.0',  # change in release formats
@@ -161,7 +171,9 @@ def test_get_legacy_release_download_url(
         else:
             assert_url('{blender_version}-OSX_10.6-x86_64.zip')
     elif operative_system == 'windows':
-        if blender_Version >= BlenderVersion('2.93') or (
+        if blender_Version >= BlenderVersion('4.3') and arch == 'arm64':
+            assert_url('{blender_version}-windows-arm64.zip')
+        elif blender_Version >= BlenderVersion('2.93') or (
             blender_Version >= BlenderVersion('2.83.14')
             and blender_Version < BlenderVersion('2.84')
         ):
