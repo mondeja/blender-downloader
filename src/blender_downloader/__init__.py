@@ -522,8 +522,15 @@ def _build_download_repo_release_file_validator(
     if operative_system == 'windows':
 
         def valid_release_file(filename):
+            if major_minor_blender_Version >= BlenderVersion('4.3'):
+                # from v4.3, Blender supports arm64 builds for Windows
+                if arch in {'x64', 'arm64'}:
+                    if not filename.endswith(f'{arch}.zip'):
+                        return False
+                elif not filename.endswith('x64.zip'):
+                    return False
             # without 32 bits support
-            if major_minor_blender_Version > BlenderVersion('2.80'):
+            elif major_minor_blender_Version > BlenderVersion('2.80'):
                 if not filename.endswith('.zip'):
                     return False
             elif not filename.endswith(f'{bits}.zip'):
