@@ -21,6 +21,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
 ]
 keywords = ["blender", "downloader", "cli", "portable", "release", "installer"]
 dependencies = [
@@ -55,11 +56,11 @@ include = ["/src"]
 packages = ["src/blender_downloader"]
 
 [tool.hatch.envs.default]
-python = "3.10"
+python = "3.11"
 dependencies = ["mondeja-bump"]
 
 [tool.hatch.envs.style]
-python = "3.10"
+python = "3.11"
 detached = true
 dependencies = ["pre-commit"]
 
@@ -85,14 +86,14 @@ cov = [
 ]
 
 [[tool.hatch.envs.tests.matrix]]
-python = ["py38", "py39", "py310", "py311", "py312"]
+python = ["py38", "py39", "py310", "py311", "py312", "py313"]
 
 [tool.bump]
 targets = [{ file = "pyproject.toml" }, { file = "src/blender_downloader/__init__.py" }]
 
 [tool.project-config]
 cache = "2 days"
-style = ["gh://mondeja/project-config-styles@v5.2.1/python/base.json5"]
+style = ["gh://mondeja/project-config-styles@v5.4/python/base.json5"]
 
 [tool.coverage.run]
 source = ["src"]
