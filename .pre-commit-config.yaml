@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: v3.4.2
+    rev: v3.9.4
     hooks:
       - id: prettier
         types_or:
@@ -29,21 +29,21 @@ repos:
       - id: check-useless-excludes
         name: check-useless-excludes
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
         name: trailing-whitespace
       - id: end-of-file-fixer
         name: end-of-file-fixer
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.30.0
+    rev: 0.37.4
     hooks:
       - id: check-github-workflows
         name: check-github-workflows
         args:
           - --verbose
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.4
+    rev: v0.15.20
     hooks:
       - id: ruff
         args:
@@ -54,17 +54,17 @@ repos:
     hooks:
       - id: autopep8
   - repo: https://github.com/adrienverge/yamllint
-    rev: v1.35.1
+    rev: v1.38.0
     hooks:
       - id: yamllint
   - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.17.1
+    rev: v0.22.1
     hooks:
       - id: markdownlint-cli2
         name: markdownlint-readme
         files: ^README.md
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
-    rev: 3.0.3
+    rev: 3.6.1
     hooks:
       - id: editorconfig-checker
         name: editorconfig-checker
